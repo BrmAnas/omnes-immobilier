@@ -1,0 +1,654 @@
+/* Omnes Immobilier - Style luxueux et minimaliste */
+
+/* =========== Fonts =========== */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Poppins:wght@300;400;500;600&display=swap');
+
+/* =========== Variables =========== */
+:root {
+  --dark-primary: #1a1a1a;
+  --primary: #333333;
+  --secondary: #a67c52; /* Gold accent */
+  --light-secondary: #d4b88f;
+  --light: #f8f9fa;
+  --white: #ffffff;
+  --grey: #e0e0e0;
+  --dark-grey: #888888;
+  --success: #4a7c59;
+  --danger: #a63f52;
+  --warning: #d4a150;
+  --info: #5899a6;
+  --transition: all 0.3s ease;
+  --box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  --box-shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.1);
+  --font-heading: 'Playfair Display', serif;
+  --font-body: 'Poppins', sans-serif;
+}
+
+/* =========== Base Styles =========== */
+body {
+  font-family: var(--font-body);
+  color: var(--primary);
+  line-height: 1.6;
+  background-color: var(--light);
+  font-weight: 300;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 500;
+  color: var(--dark-primary);
+  letter-spacing: -0.02em;
+}
+
+p {
+  margin-bottom: 1.5rem;
+}
+
+a {
+  color: var(--secondary);
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+a:hover {
+  color: var(--light-secondary);
+  text-decoration: none;
+}
+
+.container {
+  max-width: 1280px;
+  padding: 0 1.5rem;
+}
+
+/* =========== Utility Classes =========== */
+.bg-primary {
+  background-color: var(--primary) !important;
+}
+
+.bg-secondary {
+  background-color: var(--secondary) !important;
+}
+
+.bg-light {
+  background-color: var(--light) !important;
+}
+
+.text-primary {
+  color: var(--primary) !important;
+}
+
+.text-secondary {
+  color: var(--secondary) !important;
+}
+
+.text-white {
+  color: var(--white) !important;
+}
+
+.text-muted {
+  color: var(--dark-grey) !important;
+}
+
+.border-top {
+  border-top: 1px solid var(--grey) !important;
+}
+
+.border-bottom {
+  border-bottom: 1px solid var(--grey) !important;
+}
+
+.section-title {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 2.5rem;
+  font-size: 2.2rem;
+}
+
+.section-title::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -10px;
+  width: 50px;
+  height: 2px;
+  background-color: var(--secondary);
+}
+
+/* =========== Buttons =========== */
+.btn {
+  font-family: var(--font-body);
+  font-weight: 400;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0;
+  transition: var(--transition);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.85rem;
+  border: none;
+}
+
+.btn-primary {
+  background-color: var(--secondary);
+  color: var(--white);
+  border: 1px solid var(--secondary);
+}
+
+.btn-primary:hover, .btn-primary:focus {
+  background-color: var(--dark-primary);
+  border-color: var(--dark-primary);
+  color: var(--white);
+}
+
+.btn-outline-primary {
+  background-color: transparent;
+  color: var(--secondary);
+  border: 1px solid var(--secondary);
+}
+
+.btn-outline-primary:hover, .btn-outline-primary:focus {
+  background-color: var(--secondary);
+  color: var(--white);
+}
+
+.btn-danger {
+  background-color: var(--danger);
+  border-color: var(--danger);
+}
+
+.btn-danger:hover, .btn-danger:focus {
+  background-color: darken(var(--danger), 10%);
+  border-color: darken(var(--danger), 10%);
+}
+
+.btn-sm {
+  padding: 0.4rem 1rem;
+  font-size: 0.8rem;
+}
+
+.btn-lg {
+  padding: 1rem 2rem;
+  font-size: 1rem;
+}
+
+/* =========== Header & Navigation =========== */
+header {
+  box-shadow: var(--box-shadow);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background-color: var(--white);
+}
+
+.navbar {
+  padding: 1.2rem 0;
+}
+
+.navbar-brand {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 1.5rem;
+  letter-spacing: -0.5px;
+  color: var(--dark-primary) !important;
+}
+
+.navbar-nav .nav-link {
+  font-weight: 400;
+  padding: 0.5rem 1rem;
+  margin: 0 0.2rem;
+  color: var(--primary);
+  position: relative;
+}
+
+.navbar-nav .nav-link::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: 0;
+  left: 1rem;
+  background-color: var(--secondary);
+  transition: var(--transition);
+}
+
+.navbar-nav .nav-link.active::after,
+.navbar-nav .nav-link:hover::after {
+  width: calc(100% - 2rem);
+}
+
+.navbar-nav .nav-link.active {
+  color: var(--secondary);
+}
+
+/* =========== Hero Section =========== */
+.hero-section {
+  padding: 5rem 0;
+  position: relative;
+}
+
+.hero-content {
+  padding: 2rem;
+  background-color: var(--white);
+  border-left: 4px solid var(--secondary);
+}
+
+.hero-content h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.hero-content p {
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+}
+
+/* =========== Cards =========== */
+.card {
+  border: none;
+  box-shadow: var(--box-shadow);
+  transition: var(--transition);
+  border-radius: 0;
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--box-shadow-hover);
+}
+
+.card-header {
+  background-color: var(--white);
+  border-bottom: 1px solid var(--grey);
+  padding: 1.25rem 1.5rem;
+  font-family: var(--font-heading);
+  font-weight: 500;
+}
+
+.card-header.bg-primary, .card-header.bg-secondary {
+  color: var(--white);
+  border-bottom: none;
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+.card-img-top {
+  height: 240px;
+  object-fit: cover;
+}
+
+.card-title {
+  font-family: var(--font-heading);
+  margin-bottom: 0.75rem;
+}
+
+.card-footer {
+  background-color: var(--white);
+  border-top: 1px solid var(--grey);
+  padding: 1.25rem 1.5rem;
+}
+
+/* Property Cards */
+.property-card {
+  position: relative;
+}
+
+.property-card .property-tag {
+  position: absolute;
+  top: 1rem;
+  left: 0;
+  background-color: var(--secondary);
+  color: var(--white);
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.property-card .property-price {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  color: var(--secondary);
+  margin: 0.75rem 0;
+}
+
+.property-card .property-location {
+  color: var(--dark-grey);
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.property-card .property-features {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--grey);
+  margin-top: 0.75rem;
+}
+
+.property-card .property-feature {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.property-card .property-feature span {
+  font-size: 0.85rem;
+  color: var(--dark-grey);
+}
+
+/* Agent Cards */
+.agent-card {
+  text-align: center;
+}
+
+.agent-card .agent-img {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 0 auto 1.5rem;
+  border: 4px solid var(--white);
+  box-shadow: var(--box-shadow);
+}
+
+.agent-card .agent-name {
+  font-family: var(--font-heading);
+  margin-bottom: 0.5rem;
+}
+
+.agent-card .agent-title {
+  color: var(--secondary);
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.agent-card .agent-contact {
+  margin-top: 1.5rem;
+}
+
+/* =========== Forms =========== */
+.form-control, .form-select {
+  border-radius: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--grey);
+  font-size: 0.95rem;
+}
+
+.form-control:focus, .form-select:focus {
+  box-shadow: none;
+  border-color: var(--secondary);
+}
+
+.form-label {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: var(--primary);
+}
+
+/* =========== Tables =========== */
+.table {
+  --bs-table-hover-color: var(--dark-primary);
+  --bs-table-hover-bg: rgba(166, 124, 82, 0.05);
+}
+
+.table th {
+  font-weight: 500;
+  color: var(--dark-primary);
+  border-bottom-width: 1px;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+}
+
+.table td {
+  vertical-align: middle;
+}
+
+/* =========== Badges =========== */
+.badge {
+  padding: 0.5rem 0.75rem;
+  font-weight: 400;
+  border-radius: 0;
+}
+
+.badge.bg-success {
+  background-color: var(--success) !important;
+}
+
+.badge.bg-danger {
+  background-color: var(--danger) !important;
+}
+
+.badge.bg-warning {
+  background-color: var(--warning) !important;
+}
+
+/* =========== Property Details Page =========== */
+.property-details .carousel {
+  overflow: hidden;
+  max-height: 500px;
+}
+
+.property-details .carousel-item img {
+  height: 500px;
+  object-fit: cover;
+}
+
+.property-details .property-title {
+  font-size: 2.2rem;
+  margin-bottom: 0.5rem;
+}
+
+.property-details .property-location {
+  color: var(--dark-grey);
+  margin-bottom: 1.5rem;
+}
+
+.property-details .property-price {
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  color: var(--secondary);
+  margin: 1.5rem 0;
+}
+
+.property-details .property-features {
+  margin: 2rem 0;
+}
+
+.property-details .property-feature {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.property-details .property-feature i {
+  width: 24px;
+  color: var(--secondary);
+  margin-right: 1rem;
+}
+
+/* =========== Agent Profile Page =========== */
+.agent-profile .agent-photo {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid var(--white);
+  box-shadow: var(--box-shadow);
+  margin-bottom: 1.5rem;
+}
+
+.agent-profile .agent-name {
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.agent-profile .agent-title {
+  color: var(--secondary);
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+}
+
+.agent-profile .agent-contact i {
+  width: 24px;
+  color: var(--secondary);
+  margin-right: 0.5rem;
+}
+
+.agent-profile .agent-bio {
+  margin: 2rem 0;
+}
+
+.agent-calendar {
+  background-color: var(--white);
+  padding: 1.5rem;
+  box-shadow: var(--box-shadow);
+}
+
+/* =========== Footer =========== */
+footer {
+  background-color: var(--dark-primary);
+  color: var(--white);
+  padding: 4rem 0 2rem;
+}
+
+footer h5 {
+  color: var(--white);
+  margin-bottom: 1.5rem;
+  position: relative;
+  display: inline-block;
+}
+
+footer h5::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -10px;
+  width: 30px;
+  height: 2px;
+  background-color: var(--secondary);
+}
+
+footer p, footer address {
+  color: #aaa;
+}
+
+footer a {
+  color: #aaa;
+  transition: var(--transition);
+}
+
+footer a:hover {
+  color: var(--white);
+  text-decoration: none;
+}
+
+footer .social-links a {
+  display: inline-block;
+  margin-right: 1rem;
+  width: 40px;
+  height: 40px;
+  line-height: 40px;
+  text-align: center;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  transition: var(--transition);
+}
+
+footer .social-links a:hover {
+  background-color: var(--secondary);
+  color: var(--white);
+}
+
+footer .copyright {
+  padding-top: 2rem;
+  margin-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+  font-size: 0.9rem;
+  color: #aaa;
+}
+
+/* =========== Media Queries =========== */
+@media (max-width: 991.98px) {
+  .navbar-nav {
+    margin-top: 1rem;
+  }
+  
+  .navbar-nav .nav-link {
+    padding: 0.75rem 0;
+  }
+  
+  .navbar-nav .nav-link::after {
+    left: 0;
+  }
+  
+  .navbar-nav .nav-link.active::after,
+  .navbar-nav .nav-link:hover::after {
+    width: 50px;
+  }
+  
+  .property-details .carousel-item img {
+    height: 400px;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .hero-section {
+    padding: 3rem 0;
+  }
+  
+  .section-title {
+    font-size: 1.8rem;
+  }
+  
+  .card-img-top {
+    height: 200px;
+  }
+  
+  .property-details .carousel-item img {
+    height: 300px;
+  }
+  
+  .property-details .property-title {
+    font-size: 1.8rem;
+  }
+  
+  .property-details .property-price {
+    font-size: 1.6rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .hero-content h1 {
+    font-size: 2rem;
+  }
+  
+  .card-img-top {
+    height: 180px;
+  }
+  
+  .property-details .carousel-item img {
+    height: 250px;
+  }
+}
+
+/* =========== Custom Scrollbar =========== */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--light);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--secondary);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--dark-primary);
+}
