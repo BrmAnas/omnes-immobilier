@@ -127,15 +127,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Récupérer l'agent à modifier si nécessaire
-$agent_to_edit = null;
-if ($action === 'edit' && $id > 0) {
-    $agent_to_edit = $agent->getAgentById($id);
-    if (!$agent_to_edit) {
-        set_alert('danger', 'L\'agent demandé n\'existe pas.');
-        redirect('/omnes-immobilier/admin/agents.php');
-    }
-}
+                                            // Récupérer l'agent à modifier si nécessaire
+                                            $agent_to_edit = null;
+                                            if ($action === 'edit' && $id > 0) {
+                                                $agent_to_edit = $agent->getAgentById($id);
+                                                if (!$agent_to_edit) {
+                                                    set_alert('danger', 'L\'agent demandé n\'existe pas.');
+                                                    redirect('/omnes-immobilier/admin/agents.php');
+                                                }
+                                            }
 
 // Récupérer tous les agents pour l'affichage
 $agents = $agent->getAllAgents();
