@@ -652,3 +652,55 @@ footer .copyright {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--dark-primary);
 }
+
+/* Styles pour les cartes de services */
+.service-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.service-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.service-price {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #0d6efd;
+  margin: 1rem 0;
+}
+
+/* Styles pour la page de paiement */
+.payment-form .form-label {
+  font-weight: 500;
+}
+
+.card-icon {
+  font-size: 1.5rem;
+  margin-right: 0.5rem;
+}
+
+/* Styles pour la visite virtuelle */
+.virtual-tour-container {
+  position: relative;
+  border-radius: 0.25rem;
+  overflow: hidden;
+}
+
+.pricing-box {
+  background-color: #f8f9fa;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  text-align: center;
+  transition: transform 0.3s ease;
+}
+
+.pricing-box:hover {
+  transform: scale(1.02);
+}
+
+.price {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #0d6efd;
+}

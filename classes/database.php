@@ -95,5 +95,57 @@ class Database {
     public function lastInsertId() {
         return $this->dbh->lastInsertId();
     }
+
+    // Ajoutez ces méthodes à votre classe Database
+
+/**
+ * Commence une transaction de base de données
+ * @return bool
+ */
+public function beginTransaction() {
+    try {
+        return $this->dbh->beginTransaction();
+    } catch(PDOException $e) {
+        $this->error = $e->getMessage();
+        error_log("Erreur lors du début de la transaction : " . $this->error);
+        return false;
+    }
+}
+
+/**
+ * Valide la transaction courante
+ * @return bool
+ */
+public function commit() {
+    try {
+        return $this->dbh->commit();
+    } catch(PDOException $e) {
+        $this->error = $e->getMessage();
+        error_log("Erreur lors de la validation de la transaction : " . $this->error);
+        return false;
+    }
+}
+
+/**
+ * Annule la transaction courante
+ * @return bool
+ */
+public function rollBack() {
+    try {
+        return $this->dbh->rollBack();
+    } catch(PDOException $e) {
+        $this->error = $e->getMessage();
+        error_log("Erreur lors de l'annulation de la transaction : " . $this->error);
+        return false;
+    }
+}
+
+/**
+ * Vérifie si une transaction est en cours
+ * @return bool
+ */
+public function inTransaction() {
+    return $this->dbh->inTransaction();
+}
 }
 ?>

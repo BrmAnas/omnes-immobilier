@@ -37,6 +37,15 @@ if ($type) {
             <a href="properties.php?type=location" class="btn <?php echo $type === 'location' ? 'btn-primary' : 'btn-outline-primary'; ?>">Location</a>
         </div>
     </div>
+
+    <!-- Ajouter après le titre principal -->
+<div class="alert alert-info d-flex align-items-center mb-4" data-aos="fade-up">
+    <i class="fas fa-lightbulb fa-2x me-3"></i>
+    <div>
+        <strong>Conseil Omnes :</strong> Accédez à nos visites virtuelles 3D pour explorer les propriétés sans vous déplacer !
+        <a href="/omnes-immobilier/account-services.php" class="btn btn-sm btn-primary ms-3">Découvrir</a>
+    </div>
+</div>
     
     <!-- Liste des propriétés -->
     <div class="row">

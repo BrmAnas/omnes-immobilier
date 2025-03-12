@@ -197,6 +197,10 @@ $page_title = $prop->titre;
                     </div>
                 </div>
             </div>
+            <!-- Ajouter dans la section des actions/boutons -->
+<a href="/omnes-immobilier/virtual-tour.php?id=<?php echo $prop->id_propriete; ?>" class="btn btn-outline-primary w-100 mt-2">
+    <i class="fas fa-vr-cardboard me-2"></i> Visite Virtuelle 3D
+</a>
         </div>
     </div>
 </div>

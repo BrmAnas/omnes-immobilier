@@ -67,7 +67,50 @@ if (count($agents) > 3) {
         </div>
     </div>
 </section>
-
+<!-- Ajouter après la section des propriétés à la une -->
+<section class="services-section mt-5">
+    <h2 class="section-title" data-aos="fade-up">Nos Services Premium</h2>
+    <div class="row mt-3">
+        <!-- Carte Dossier Acheteur Premium -->
+        <div class="col-md-4" data-aos="fade-up">
+            <div class="card service-card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-file-invoice fa-3x text-primary mb-3"></i>
+                    <h4>Dossier Acheteur Premium</h4>
+                    <p>Optimisez vos chances avec un dossier acheteur qui vous démarque.</p>
+                    <p class="service-price">99,00 €</p>
+                    <a href="/omnes-immobilier/account-services.php" class="btn btn-outline-primary">En savoir plus</a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Carte Photos Professionnelles -->
+        <div class="col-md-4" data-aos="fade-up" data-aos-delay="100">
+            <div class="card service-card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-camera fa-3x text-primary mb-3"></i>
+                    <h4>Photos Professionnelles</h4>
+                    <p>Sublimez votre bien avec des photos de qualité professionnelle.</p>
+                    <p class="service-price">149,00 €</p>
+                    <a href="/omnes-immobilier/account-services.php" class="btn btn-outline-primary">En savoir plus</a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Carte Visite Virtuelle -->
+        <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
+            <div class="card service-card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-vr-cardboard fa-3x text-primary mb-3"></i>
+                    <h4>Visite Virtuelle 3D</h4>
+                    <p>Explorez les propriétés en détail avec notre technologie 3D immersive.</p>
+                    <p class="service-price">39,90 €</p>
+                    <a href="/omnes-immobilier/properties.php" class="btn btn-outline-primary">Voir les propriétés</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 <section class="featured-properties mt-5">
     <h2 class="section-title" data-aos="fade-up">Nos biens à la une</h2>
     <div class="row mt-3">

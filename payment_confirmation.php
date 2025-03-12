@@ -1,226 +1,188 @@
 <?php
-session_start();
+define('BASE_PATH', $_SERVER['DOCUMENT_ROOT'] . '/omnes-immobilier/');
+require_once BASE_PATH . 'config/init.php';
 
-// Database connection parameters
-$servername = "localhost";
-$username = "your_username";
-$password = "your_password";
-$dbname = "omnes_immobilier";
-
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+// Vérifier si l'utilisateur est connecté
+if (!is_logged_in()) {
+    redirect('/omnes-immobilier/login.php');
 }
 
-// Function to sanitize input data
-function sanitize_input($data) {
-    $data = trim($data);
-    $data = stripslashes($data);
-    $data = htmlspecialchars($data);
-    return $data;
+// Vérifier si un ID de transaction est présent
+if (!isset($_SESSION['transaction_id'])) {
+    redirect('/omnes-immobilier/account.php');
 }
 
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit();
+$transaction_id = $_SESSION['transaction_id'];
+
+// Inclure les classes nécessaires
+require_once BASE_PATH . 'classes/Payment.php';
+require_once BASE_PATH . 'classes/Client.php';
+
+// Initialiser les classes
+$payment = new Payment();
+$client = new Client();
+
+// Récupérer les détails de la transaction pour le reçu
+$receipt = $payment->generateReceipt($transaction_id);
+
+if (!$receipt) {
+    set_alert('danger', 'Impossible de récupérer les détails de votre transaction.');
+    redirect('/omnes-immobilier/account.php');
 }
 
-// Process payment form submission
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Validate and sanitize payment information
-    $card_type = sanitize_input($_POST['card_type']);
-    $card_number = sanitize_input($_POST['card_number']);
-    $card_name = sanitize_input($_POST['card_name']);
-    $expiry_date = sanitize_input($_POST['expiry_date']);
-    $security_code = sanitize_input($_POST['security_code']);
+// Supprimer l'ID de transaction de la session après utilisation
+unset($_SESSION['transaction_id']);
 
-    // Validate payment information (basic validation)
-    $errors = [];
-
-    if (empty($card_type)) {
-        $errors[] = "Veuillez sélectionner un type de carte.";
-    }
-
-    if (empty($card_number) || !preg_match("/^[0-9]{13,19}$/", $card_number)) {
-        $errors[] = "Numéro de carte invalide.";
-    }
-
-    if (empty($card_name)) {
-        $errors[] = "Nom sur la carte requis.";
-    }
-
-    if (empty($expiry_date) || !preg_match("/^(0[1-9]|1[0-2])\/[0-9]{2}$/", $expiry_date)) {
-        $errors[] = "Date d'expiration invalide.";
-    }
-
-    if (empty($security_code) || !preg_match("/^[0-9]{3,4}$/", $security_code)) {
-        $errors[] = "Code de sécurité invalide.";
-    }
-
-    // If no errors, process payment
-    if (empty($errors)) {
-        // In a real-world scenario, this is where you would:
-        // 1. Communicate with a payment gateway
-        // 2. Verify payment details
-        // 3. Process the transaction
-
-        // For this project, we'll simulate a payment validation
-        $user_id = $_SESSION['user_id'];
-        $service_id = $_SESSION['service_id']; // Assuming service details are stored in session
-        $amount = $_SESSION['service_amount'];
-
-        // Insert transaction into database
-        $sql = "INSERT INTO transactions (user_id, service_id, amount, payment_method, transaction_date) 
-                VALUES (?, ?, ?, ?, NOW())";
-        
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("iids", $user_id, $service_id, $amount, $card_type);
-        
-        if ($stmt->execute()) {
-            // Send confirmation email/SMS (simulated)
-            $to = $_SESSION['user_email'];
-            $subject = "Confirmation de paiement - Omnes Immobilier";
-            $message = "Votre paiement de {$amount}€ a été traité avec succès.\n";
-            $message .= "Détails du service: " . $_SESSION['service_description'];
-            $headers = "From: confirmation@omnesimmobilier.fr";
-            
-            // In a real scenario, use a proper email sending library
-            mail($to, $subject, $message, $headers);
-
-            // Redirect to confirmation page
-            $_SESSION['payment_success'] = true;
-            header("Location: payment_success.php");
-            exit();
-        } else {
-            $errors[] = "Erreur lors du traitement du paiement. Veuillez réessayer.";
-        }
-
-        $stmt->close();
-    }
-}
-
-$conn->close();
+$page_title = "Confirmation de paiement";
+include BASE_PATH . 'includes/header.php';
 ?>
 
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Confirmation de Paiement - Omnes Immobilier</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-    <div class="container mt-5">
-        <div class="row justify-content-center">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header bg-primary text-white">
-                        <h3 class="text-center">Confirmation de Paiement</h3>
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card mb-4" data-aos="fade-up">
+                <div class="card-header bg-success text-white">
+                    <h2 class="h4 mb-0"><i class="fas fa-check-circle me-2"></i> Paiement réussi</h2>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-check-circle text-success fa-5x mb-3"></i>
+                        <h3>Merci pour votre paiement !</h3>
+                        <p class="lead">Votre paiement a été traité avec succès.</p>
                     </div>
-                    <div class="card-body">
-                        <?php
-                        // Display any errors
-                        if (!empty($errors)) {
-                            echo '<div class="alert alert-danger">';
-                            foreach ($errors as $error) {
-                                echo '<p>' . $error . '</p>';
-                            }
-                            echo '</div>';
-                        }
-                        ?>
-
-                        <form method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
-                            <div class="mb-3">
-                                <label for="card_type" class="form-label">Type de Carte</label>
-                                <select name="card_type" id="card_type" class="form-select" required>
-                                    <option value="">Sélectionnez un type de carte</option>
-                                    <option value="Visa">Visa</option>
-                                    <option value="MasterCard">MasterCard</option>
-                                    <option value="AmericanExpress">American Express</option>
-                                    <option value="PayPal">PayPal</option>
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="card_number" class="form-label">Numéro de Carte</label>
-                                <input type="text" name="card_number" id="card_number" class="form-control" 
-                                       placeholder="Numéro de carte" required 
-                                       pattern="[0-9]{13,19}" maxlength="19">
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="card_name" class="form-label">Nom sur la Carte</label>
-                                <input type="text" name="card_name" id="card_name" class="form-control" 
-                                       placeholder="Nom complet" required>
-                            </div>
-
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="expiry_date" class="form-label">Date d'Expiration</label>
-                                    <input type="text" name="expiry_date" id="expiry_date" class="form-control" 
-                                           placeholder="MM/AA" required 
-                                           pattern="(0[1-9]|1[0-2])/[0-9]{2}" maxlength="5">
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="security_code" class="form-label">Code de Sécurité</label>
-                                    <input type="text" name="security_code" id="security_code" class="form-control" 
-                                           placeholder="CVV" required 
-                                           pattern="[0-9]{3,4}" maxlength="4">
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <p><strong>Montant à payer:</strong> <?php echo $_SESSION['service_amount']; ?> €</p>
-                                <p><strong>Service:</strong> <?php echo $_SESSION['service_description']; ?></p>
-                            </div>
-
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-primary">Confirmer le Paiement</button>
-                            </div>
-                        </form>
+                    
+                    <div class="alert alert-info">
+                        <p class="mb-0">Une confirmation a été envoyée à votre adresse email: <strong><?php echo htmlspecialchars($receipt['client']['email']); ?></strong></p>
+                    </div>
+                    
+                    <div class="receipt mt-4">
+                        <h4>Détails de la transaction</h4>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th>Numéro de reçu:</th>
+                                    <td><?php echo htmlspecialchars($receipt['numero']); ?></td>
+                                </tr>
+                                <tr>
+                                    <th>Date:</th>
+                                    <td><?php echo format_date(date('Y-m-d', strtotime($receipt['date']))); ?></td>
+                                </tr>
+                                <tr>
+                                    <th>Client:</th>
+                                    <td><?php echo htmlspecialchars($receipt['client']['nom']); ?></td>
+                                </tr>
+                                <tr>
+                                    <th>Service:</th>
+                                    <td><?php echo htmlspecialchars($receipt['type_service']); ?></td>
+                                </tr>
+                                <tr>
+                                    <th>Mode de paiement:</th>
+                                    <td>
+                                        <?php 
+                                        switch($receipt['type_paiement']) {
+                                            case 'visa':
+                                                echo 'Carte Visa';
+                                                break;
+                                            case 'mastercard':
+                                                echo 'MasterCard';
+                                                break;
+                                            case 'amex':
+                                                echo 'American Express';
+                                                break;
+                                            case 'paypal':
+                                                echo 'PayPal';
+                                                break;
+                                            case 'chequecadeau':
+                                                echo 'Chèque-cadeau Omnes Immobilier';
+                                                break;
+                                            default:
+                                                echo htmlspecialchars($receipt['type_paiement']);
+                                        }
+                                        ?>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Référence:</th>
+                                    <td><?php echo htmlspecialchars($receipt['reference']); ?></td>
+                                </tr>
+                                <tr>
+                                    <th>Montant:</th>
+                                    <td class="fw-bold"><?php echo format_price($receipt['montant']); ?></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 d-grid gap-2">
+                        <button class="btn btn-outline-secondary" onclick="window.print()">
+                            <i class="fas fa-print me-2"></i> Imprimer le reçu
+                        </button>
+                        <a href="/omnes-immobilier/account.php" class="btn btn-primary">
+                            <i class="fas fa-user me-2"></i> Aller à mon compte
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4" data-aos="fade-up">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="h5 mb-0">Et maintenant ?</h3>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="me-3">
+                            <i class="fas fa-calendar-check fa-2x text-primary"></i>
+                        </div>
+                        <div>
+                            <h5>Consultez vos rendez-vous</h5>
+                            <p>Accédez à votre espace personnel pour voir tous vos rendez-vous et suivre votre parcours immobilier.</p>
+                            <a href="/omnes-immobilier/my-appointments.php" class="btn btn-sm btn-outline-primary">Mes rendez-vous</a>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="me-3">
+                            <i class="fas fa-home fa-2x text-primary"></i>
+                        </div>
+                        <div>
+                            <h5>Découvrez d'autres biens</h5>
+                            <p>Continuez votre recherche immobilière en explorant notre catalogue de propriétés.</p>
+                            <a href="/omnes-immobilier/properties.php" class="btn btn-sm btn-outline-primary">Voir les propriétés</a>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex align-items-start">
+                        <div class="me-3">
+                            <i class="fas fa-headset fa-2x text-primary"></i>
+                        </div>
+                        <div>
+                            <h5>Besoin d'aide ?</h5>
+                            <p>Notre équipe est disponible pour répondre à toutes vos questions.</p>
+                            <a href="/omnes-immobilier/contact.php" class="btn btn-sm btn-outline-primary">Contactez-nous</a>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-    // Additional client-side validation
-    document.addEventListener('DOMContentLoaded', function() {
-        const form = document.querySelector('form');
-        form.addEventListener('submit', function(event) {
-            const cardNumber = document.getElementById('card_number');
-            const cardName = document.getElementById('card_name');
-            const expiryDate = document.getElementById('expiry_date');
-            const securityCode = document.getElementById('security_code');
+<style>
+@media print {
+    header, footer, .card-header, .mt-4, .alert, nav, .no-print {
+        display: none !important;
+    }
+    body {
+        padding: 0;
+        margin: 0;
+    }
+    .card {
+        border: none !important;
+    }
+    .card-body {
+        padding: 0 !important;
+    }
+}
+</style>
 
-            // Basic validation
-            if (!cardNumber.value.match(/^[0-9]{13,19}$/)) {
-                alert('Numéro de carte invalide');
-                event.preventDefault();
-            }
-
-            if (cardName.value.trim() === '') {
-                alert('Nom sur la carte requis');
-                event.preventDefault();
-            }
-
-            if (!expiryDate.value.match(/^(0[1-9]|1[0-2])\/[0-9]{2}$/)) {
-                alert('Date d\'expiration invalide');
-                event.preventDefault();
-            }
-
-            if (!securityCode.value.match(/^[0-9]{3,4}$/)) {
-                alert('Code de sécurité invalide');
-                event.preventDefault();
-            }
-        });
-    });
-    </script>
-</body>
-</html>
+<?php include BASE_PATH . 'includes/footer.php'; ?>
