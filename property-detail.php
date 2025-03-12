@@ -62,7 +62,7 @@ $page_title = $prop->titre;
                         <?php endforeach; ?>
                     <?php else : ?>
                         <div class="carousel-item active">
-                            <<img src="/omnes-immobilier/assets/img/properties/default.jpg" class="d-block w-100" alt="<?php echo $prop->titre; ?>" onerror="this.src='https://via.placeholder.com/800x400?text=Propriété'">
+                            <img src="/omnes-immobilier/assets/img/properties/default.jpg" class="d-block w-100" alt="<?php echo $prop->titre; ?>" onerror="this.src='https://via.placeholder.com/800x400?text=Propriété'">
                         </div>
                     <?php endif; ?>
                 </div>
@@ -95,9 +95,21 @@ $page_title = $prop->titre;
                 </div>
                 <div class="card-body">
                     <p><i class="fas fa-map-marker-alt"></i> <?php echo $prop->adresse; ?>, <?php echo $prop->code_postal; ?> <?php echo $prop->ville; ?>, <?php echo $prop->pays; ?></p>
-                    <!-- Ici, on pourrait intégrer une carte Google Maps -->
+                    
+                    <!-- Carte Google Maps sans clé API -->
                     <div class="ratio ratio-16x9">
-                        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2624.9916256937394!2d2.292292615483097!3d48.85837007928757!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47e66e2964e34e2d%3A0x8ddca9ee380ef7e0!2sTour%20Eiffel!5e0!3m2!1sfr!2sfr!4v1647531555654!5m2!1sfr!2sfr" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+                        <?php
+                        // Formater l'adresse pour l'URL
+                        $address = urlencode($prop->adresse . ', ' . $prop->code_postal . ' ' . $prop->ville . ', ' . $prop->pays);
+                        ?>
+                        <iframe 
+                            src="https://maps.google.com/maps?q=<?php echo $address; ?>&t=&z=13&ie=UTF8&iwloc=&output=embed" 
+                            width="600" 
+                            height="450" 
+                            style="border:0;" 
+                            allowfullscreen="" 
+                            loading="lazy">
+                        </iframe>
                     </div>
                 </div>
             </div>

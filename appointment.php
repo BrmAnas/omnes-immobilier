@@ -29,35 +29,68 @@ if (!$user_client) {
 }
 
 // Si on a un agent et une propriété spécifiés dans l'URL
-$id_agent = isset($_GET['agent']) ? $_GET['agent'] : null;
-$id_propriete = isset($_GET['property']) ? $_GET['property'] : null;
+$id_agent = isset($_GET['agent']) ? intval($_GET['agent']) : null;
+$id_propriete = isset($_GET['property']) ? intval($_GET['property']) : null;
 
 // Si les données du formulaire ont été soumises
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    // Récupérer les données du formulaire
-    $appointment_data = [
-        'id_client' => $user_client->id_client,
-        'id_agent' => $_POST['id_agent'],
-        'id_propriete' => $_POST['id_propriete'],
-        'date' => $_POST['date'],
-        'heure' => $_POST['heure'],
-        'motif' => $_POST['motif'],
-        'commentaire' => $_POST['commentaire'] ?? null
-    ];
-    
-    // Vérifier si le créneau est disponible
-    if ($appointment->isSlotAvailable($appointment_data['id_agent'], $appointment_data['date'], $appointment_data['heure'])) {
-        // Créer le rendez-vous
-        $rdv_id = $appointment->create($appointment_data);
+    // Validation des données
+    $errors = [];
+
+    if (empty($_POST['id_agent'])) {
+        $errors[] = "Veuillez sélectionner un agent.";
+    }
+
+    if (!isset($_POST['id_propriete'])) {
+        $errors[] = "Veuillez sélectionner une propriété ou choisir un rendez-vous général.";
+    }
+
+    if (empty($_POST['date'])) {
+        $errors[] = "Veuillez choisir une date.";
+    } elseif (strtotime($_POST['date']) < strtotime(date('Y-m-d'))) {
+        $errors[] = "La date doit être future.";
+    }
+
+    if (empty($_POST['heure'])) {
+        $errors[] = "Veuillez choisir une heure.";
+    }
+
+    if (empty($_POST['motif'])) {
+        $errors[] = "Veuillez indiquer le motif du rendez-vous.";
+    }
+
+    // Si pas d'erreurs, procéder à la création du rendez-vous
+    if (empty($errors)) {
+        // Récupérer les données du formulaire
+        $appointment_data = [
+            'id_client' => $user_client->id_client,
+            'id_agent' => $_POST['id_agent'],
+            'id_propriete' => $_POST['id_propriete'],
+            'date' => $_POST['date'],
+            'heure' => $_POST['heure'],
+            'motif' => $_POST['motif'],
+            'commentaire' => isset($_POST['commentaire']) ? $_POST['commentaire'] : null
+        ];
         
-        if ($rdv_id) {
-            set_alert('success', 'Votre rendez-vous a été pris avec succès.');
-            redirect('/omnes-immobilier/my-appointments.php');
+        // Vérifier si le créneau est disponible
+        if ($appointment->isSlotAvailable($appointment_data['id_agent'], $appointment_data['date'], $appointment_data['heure'])) {
+            // Créer le rendez-vous
+            $rdv_id = $appointment->create($appointment_data);
+            
+            if ($rdv_id) {
+                // Envoi d'une notification à l'agent (email ou notification système)
+                // Code pour envoyer une notification ici si nécessaire
+                
+                set_alert('success', 'Votre rendez-vous a été pris avec succès. Vous recevrez une confirmation lorsque l\'agent aura validé le rendez-vous.');
+                redirect('/omnes-immobilier/my-appointments.php');
+            } else {
+                $error = "Une erreur est survenue lors de la prise de rendez-vous.";
+            }
         } else {
-            $error = "Une erreur est survenue lors de la prise de rendez-vous.";
+            $error = "Ce créneau n'est plus disponible. Veuillez en choisir un autre.";
         }
     } else {
-        $error = "Ce créneau n'est plus disponible. Veuillez en choisir un autre.";
+        $error = implode("<br>", $errors);
     }
 }
 
@@ -71,10 +104,11 @@ $property_info = $id_propriete ? $property->getPropertyById($id_propriete) : nul
 $all_agents = $id_agent ? null : $agent->getAllAgents();
 
 // Si on a un agent mais pas de propriété, récupérer les propriétés gérées par cet agent
-$agent_properties = ($id_agent && !$id_propriete) ? $property->getPropertiesByAgent($id_agent) : null;
+$agent_properties = ($id_agent && $id_propriete === null) ? $property->getPropertiesByAgent($id_agent) : null;
 
 // Récupérer les disponibilités de l'agent si un agent est spécifié
-$availabilities = $id_agent ? $agent->getAvailabilities($id_agent) : null;
+$today = date('Y-m-d');
+$availabilities = $id_agent ? $agent->getWeeklyAvailabilities($id_agent, $today) : null;
 
 $page_title = "Prise de rendez-vous";
 include BASE_PATH . 'includes/header.php';
@@ -149,7 +183,7 @@ include BASE_PATH . 'includes/header.php';
             </div>
             
             <!-- Étape 2: Sélection de la propriété -->
-            <?php if (!$property_info && $agent_properties) : ?>
+            <?php if ($id_propriete === null) : ?>
                 <div class="card mb-4" data-aos="fade-up">
                     <div class="card-header bg-primary text-white">
                         Étape 2: Choisissez une propriété
@@ -191,7 +225,7 @@ include BASE_PATH . 'includes/header.php';
                                             <i class="fas fa-calendar-alt fa-5x mb-3 text-muted"></i>
                                             <h5 class="card-title">Rendez-vous général</h5>
                                             <p class="card-text">Prendre un rendez-vous sans propriété spécifique</p>
-                                            <a href="/omnes-immobilier/appointment.php?agent=<?php echo $agent_info->id_agent; ?>&property=0" class="btn btn-outline-primary w-100">Sélectionner</a>
+                                            <a href="/omnes-immobilier/appointment.php?agent=<?php echo $agent_info->id_agent; ?>&property=0" class="btn btn-outline-primary w-100 mt-2">Sélectionner</a>
                                         </div>
                                     </div>
                                 </div>
@@ -199,7 +233,7 @@ include BASE_PATH . 'includes/header.php';
                         </div>
                     </div>
                 <?php else : ?>
-                    <?php if ($property_info) : ?>
+                    <?php if ($id_propriete > 0 && $property_info) : ?>
                         <input type="hidden" name="id_propriete" value="<?php echo $property_info->id_propriete; ?>">
                         
                         <div class="card mb-4" data-aos="fade-up">
@@ -243,7 +277,7 @@ include BASE_PATH . 'includes/header.php';
                             Étape 3: Choisissez une date et une heure
                         </div>
                         <div class="card-body">
-                            <div class="row">
+                            <div class="row mb-4">
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label for="date" class="form-label">Date du rendez-vous</label>
@@ -257,8 +291,8 @@ include BASE_PATH . 'includes/header.php';
                                             <option value="">Sélectionnez une heure</option>
                                             <?php for ($h = 9; $h < 18; $h++) : ?>
                                                 <?php if ($h != 12) : // Pas de rendez-vous à midi ?>
-                                                    <option value="<?php echo sprintf('%02d', $h); ?>:00"><?php echo sprintf('%02d', $h); ?>:00</option>
-                                                    <option value="<?php echo sprintf('%02d', $h); ?>:30"><?php echo sprintf('%02d', $h); ?>:30</option>
+                                                    <option value="<?php echo sprintf('%02d', $h); ?>:00:00"><?php echo sprintf('%02d', $h); ?>:00</option>
+                                                    <option value="<?php echo sprintf('%02d', $h); ?>:30:00"><?php echo sprintf('%02d', $h); ?>:30</option>
                                                 <?php endif; ?>
                                             <?php endfor; ?>
                                         </select>
@@ -267,7 +301,9 @@ include BASE_PATH . 'includes/header.php';
                             </div>
                             
                             <div class="alert alert-info">
-                                <h5>Disponibilités de l'agent:</h5>
+                                <h5 class="alert-heading">Disponibilités de l'agent:</h5>
+                                <p>Consultez le calendrier ci-dessous pour connaître les disponibilités de l'agent. Les créneaux marqués en vert sont disponibles.</p>
+                                
                                 <div class="table-responsive">
                                     <table class="table table-bordered text-center">
                                         <thead>
@@ -285,54 +321,26 @@ include BASE_PATH . 'includes/header.php';
                                             <tr>
                                                 <th>Matin</th>
                                                 <?php for ($i = 1; $i <= 6; $i++) : ?>
-                                                    <td class="
-                                                        <?php
-                                                        $available = false;
-                                                        if (!empty($availabilities)) {
-                                                            foreach ($availabilities as $availability) {
-                                                                $day_of_week = date('N', strtotime($availability->jour));
-                                                                $is_morning = strtotime($availability->heure_debut) < strtotime('12:00:00');
-                                                                if ($day_of_week == $i && $is_morning && $availability->statut == 'disponible') {
-                                                                    $available = true;
-                                                                    break;
-                                                                }
-                                                            }
-                                                        }
-                                                        echo $available ? 'bg-success text-white' : 'bg-danger text-white';
-                                                        ?>
-                                                    ">
-                                                        <?php echo $available ? '✓' : '×'; ?>
+                                                    <td class="<?php echo isset($availabilities[$i]) && !empty(array_filter($availabilities[$i], function($avail) { return strtotime($avail->heure_debut) < strtotime('12:00:00'); })) ? 'bg-success text-white' : 'bg-danger text-white'; ?>">
+                                                        <?php echo isset($availabilities[$i]) && !empty(array_filter($availabilities[$i], function($avail) { return strtotime($avail->heure_debut) < strtotime('12:00:00'); })) ? '✓' : '×'; ?>
                                                     </td>
                                                 <?php endfor; ?>
                                             </tr>
                                             <tr>
                                                 <th>Après-midi</th>
                                                 <?php for ($i = 1; $i <= 6; $i++) : ?>
-                                                    <td class="
-                                                        <?php
-                                                        $available = false;
-                                                        if (!empty($availabilities)) {
-                                                            foreach ($availabilities as $availability) {
-                                                                $day_of_week = date('N', strtotime($availability->jour));
-                                                                $is_afternoon = strtotime($availability->heure_debut) >= strtotime('12:00:00');
-                                                                if ($day_of_week == $i && $is_afternoon && $availability->statut == 'disponible') {
-                                                                    $available = true;
-                                                                    break;
-                                                                }
-                                                            }
-                                                        }
-                                                        echo $available ? 'bg-success text-white' : 'bg-danger text-white';
-                                                        ?>
-                                                    ">
-                                                        <?php echo $available ? '✓' : '×'; ?>
+                                                    <td class="<?php echo isset($availabilities[$i]) && !empty(array_filter($availabilities[$i], function($avail) { return strtotime($avail->heure_debut) >= strtotime('12:00:00'); })) ? 'bg-success text-white' : 'bg-danger text-white'; ?>">
+                                                        <?php echo isset($availabilities[$i]) && !empty(array_filter($availabilities[$i], function($avail) { return strtotime($avail->heure_debut) >= strtotime('12:00:00'); })) ? '✓' : '×'; ?>
                                                     </td>
                                                 <?php endfor; ?>
                                             </tr>
                                         </tbody>
                                     </table>
                                 </div>
+                                
                                 <div class="mt-2">
-                                    <small>Légende: ✓ = Disponible, × = Indisponible</small>
+                                    <p class="mb-0"><small>Légende: ✓ = Disponible, × = Indisponible</small></p>
+                                    <p class="mb-0"><small>Note: La disponibilité de l'agent est sujette à changement. Veuillez vérifier avec l'agent si vous avez des questions.</small></p>
                                 </div>
                             </div>
                         </div>
@@ -359,17 +367,42 @@ include BASE_PATH . 'includes/header.php';
                             
                             <div class="mb-3">
                                 <label for="commentaire" class="form-label">Commentaire (optionnel)</label>
-                                <textarea class="form-control" id="commentaire" name="commentaire" rows="3"></textarea>
+                                <textarea class="form-control" id="commentaire" name="commentaire" rows="3" placeholder="Précisez votre demande, vos questions, ou toute information utile pour l'agent..."></textarea>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="d-grid gap-2">
+                    <div class="d-grid gap-2 mb-5">
                         <button type="submit" class="btn btn-primary btn-lg">Confirmer le rendez-vous</button>
                     </div>
                 <?php endif; ?>
             <?php endif; ?>
         </form>
     </div>
+    
+    <script>
+    // Script pour gérer l'interdépendance entre la date et l'heure
+    document.addEventListener('DOMContentLoaded', function() {
+        const dateInput = document.getElementById('date');
+        const heureSelect = document.getElementById('heure');
+        
+        if (dateInput && heureSelect) {
+            dateInput.addEventListener('change', function() {
+                updateAvailableHours();
+            });
+            
+            function updateAvailableHours() {
+                const selectedDate = dateInput.value;
+                if (!selectedDate) return;
+                
+                // Ici, vous pourriez faire une requête AJAX pour obtenir les heures disponibles
+                // pour la date sélectionnée, puis mettre à jour les options de heureSelect
+                
+                // Pour l'instant, on simule juste une mise à jour
+                console.log('Date sélectionnée:', selectedDate);
+            }
+        }
+    });
+    </script>
     
     <?php include BASE_PATH . 'includes/footer.php'; ?>
