@@ -140,6 +140,59 @@ class Agent {
     }
 
     /**
+     * Suppression d'un agent
+     * @param int $id_agent L'ID de l'agent à supprimer
+     * @return bool Succès ou échec
+     */
+    public function delete($id_agent) {
+        try {
+            // Vérifier s'il existe des propriétés associées à cet agent
+            $this->db->query('SELECT COUNT(*) as count FROM Propriete WHERE id_agent = :id_agent');
+            $this->db->bind(':id_agent', $id_agent);
+            $result = $this->db->single();
+            
+            if ($result->count > 0) {
+                // Option 1: Empêcher la suppression
+                // return false;
+                
+                // Option 2: Réaffecter les propriétés à un autre agent (par ex. l'ID 1)
+                $this->db->query('UPDATE Propriete SET id_agent = 1 WHERE id_agent = :id_agent');
+                $this->db->bind(':id_agent', $id_agent);
+                $this->db->execute();
+            }
+            
+            // Vérifier s'il existe des rendez-vous associés à cet agent
+            $this->db->query('SELECT COUNT(*) as count FROM Rendez_Vous WHERE id_agent = :id_agent');
+            $this->db->bind(':id_agent', $id_agent);
+            $result = $this->db->single();
+            
+            if ($result->count > 0) {
+                // Option 1: Empêcher la suppression
+                // return false;
+                
+                // Option 2: Supprimer les rendez-vous
+                $this->db->query('DELETE FROM Rendez_Vous WHERE id_agent = :id_agent');
+                $this->db->bind(':id_agent', $id_agent);
+                $this->db->execute();
+            }
+            
+            // Supprimer les disponibilités de l'agent
+            $this->db->query('DELETE FROM Disponibilite WHERE id_agent = :id_agent');
+            $this->db->bind(':id_agent', $id_agent);
+            $this->db->execute();
+            
+            // Supprimer l'agent
+            $this->db->query('DELETE FROM Agent_Immobilier WHERE id_agent = :id_agent');
+            $this->db->bind(':id_agent', $id_agent);
+            
+            return $this->db->execute();
+        } catch (Exception $e) {
+            error_log("Exception lors de la suppression d'un agent: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Récupération des disponibilités d'un agent
      * @param int $id_agent L'ID de l'agent
      * @return array Les disponibilités

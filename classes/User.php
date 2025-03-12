@@ -90,4 +90,18 @@ class User {
         
         return $this->db->execute();
     }
-} ?>
+
+    // Suppression d'un utilisateur par son ID
+    public function delete($id_utilisateur) {
+        try {
+            $this->db->query('DELETE FROM Utilisateur WHERE id_utilisateur = :id_utilisateur');
+            $this->db->bind(':id_utilisateur', $id_utilisateur);
+            
+            return $this->db->execute();
+        } catch (Exception $e) {
+            error_log("Exception lors de la suppression d'un utilisateur: " . $e->getMessage());
+            return false;
+        }
+    }
+}
+?>

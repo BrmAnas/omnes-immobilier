@@ -28,9 +28,25 @@ $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 // Traitement de l'action
 if ($action === 'delete' && $id > 0) {
-    // TODO: Implémenter la suppression
-    // Pour l'instant, rediriger simplement avec un message
-    set_alert('success', 'L\'agent a été supprimé avec succès.');
+    // Récupérer l'agent pour obtenir son id_utilisateur
+    $agent_to_delete = $agent->getAgentById($id);
+    
+    if ($agent_to_delete) {
+        // Supprimer l'agent
+        if ($agent->delete($id)) {
+            // Supprimer l'utilisateur associé
+            if ($user->delete($agent_to_delete->id_utilisateur)) {
+                set_alert('success', 'L\'agent a été supprimé avec succès.');
+            } else {
+                set_alert('warning', 'L\'agent a été supprimé mais des données utilisateur peuvent rester.');
+            }
+        } else {
+            set_alert('danger', 'Une erreur est survenue lors de la suppression de l\'agent.');
+        }
+    } else {
+        set_alert('danger', 'Agent introuvable.');
+    }
+    
     redirect('/omnes-immobilier/admin/agents.php');
 }
 
@@ -51,9 +67,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
     
     if ($action === 'edit' && $id > 0) {
-        // TODO: Implémenter la modification
-        set_alert('success', 'L\'agent a été mis à jour avec succès.');
-        redirect('/omnes-immobilier/admin/agents.php');
+        // Récupérer l'agent existant pour son id_utilisateur et ses chemins de fichiers
+        $agent_to_edit = $agent->getAgentById($id);
+        
+        // Mettre à jour les informations de l'utilisateur
+        $user_update_data = [
+            'id_utilisateur' => $agent_to_edit->id_utilisateur,
+            'nom' => $_POST['nom'],
+            'prenom' => $_POST['prenom'],
+            'telephone' => $_POST['telephone']
+        ];
+        $user->updateUser($user_update_data);
+        
+        // Mettre à jour les informations de l'agent
+        $agent_update_data = [
+            'id_agent' => $id,
+            'specialite' => $_POST['specialite'],
+            'biographie' => $_POST['biographie'],
+            'cv_path' => $agent_to_edit->cv_path,
+            'photo_path' => $agent_to_edit->photo_path
+        ];
+        
+        // Traitement de l'upload de photo si une nouvelle a été fournie
+        if (isset($_FILES['photo']) && $_FILES['photo']['error'] == 0) {
+            $upload_dir = BASE_PATH . 'assets/uploads/agents/';
+            
+            // Créer le dossier s'il n'existe pas
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+            
+            $file_ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
+            $file_name = 'agent_' . time() . '.' . $file_ext;
+            $file_path = $upload_dir . $file_name;
+            
+            if (move_uploaded_file($_FILES['photo']['tmp_name'], $file_path)) {
+                $agent_update_data['photo_path'] = '/omnes-immobilier/assets/uploads/agents/' . $file_name;
+            }
+        }
+        
+        // Traitement de l'upload du CV si un nouveau a été fourni
+        if (isset($_FILES['cv']) && $_FILES['cv']['error'] == 0) {
+            $upload_dir = BASE_PATH . 'assets/uploads/cv/';
+            
+            // Créer le dossier s'il n'existe pas
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+            
+            $file_ext = pathinfo($_FILES['cv']['name'], PATHINFO_EXTENSION);
+            $file_name = 'cv_agent_' . time() . '.' . $file_ext;
+            $file_path = $upload_dir . $file_name;
+            
+            if (move_uploaded_file($_FILES['cv']['tmp_name'], $file_path)) {
+                $agent_update_data['cv_path'] = '/omnes-immobilier/assets/uploads/cv/' . $file_name;
+            }
+        }
+        
+        // Mettre à jour l'agent
+        if ($agent->update($agent_update_data)) {
+            set_alert('success', 'L\'agent a été mis à jour avec succès.');
+            redirect('/omnes-immobilier/admin/agents.php');
+        } else {
+            $error = 'Une erreur est survenue lors de la mise à jour de l\'agent.';
+        }
     } else {
         // Ajout d'un nouvel agent
         // Générer un mot de passe aléatoire
@@ -127,15 +204,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-                                            // Récupérer l'agent à modifier si nécessaire
-                                            $agent_to_edit = null;
-                                            if ($action === 'edit' && $id > 0) {
-                                                $agent_to_edit = $agent->getAgentById($id);
-                                                if (!$agent_to_edit) {
-                                                    set_alert('danger', 'L\'agent demandé n\'existe pas.');
-                                                    redirect('/omnes-immobilier/admin/agents.php');
-                                                }
-                                            }
+// Récupérer l'agent à modifier si nécessaire
+$agent_to_edit = null;
+if ($action === 'edit' && $id > 0) {
+    $agent_to_edit = $agent->getAgentById($id);
+    if (!$agent_to_edit) {
+        set_alert('danger', 'L\'agent demandé n\'existe pas.');
+        redirect('/omnes-immobilier/admin/agents.php');
+    }
+}
 
 // Récupérer tous les agents pour l'affichage
 $agents = $agent->getAllAgents();

@@ -161,7 +161,7 @@ class Property {
                         nb_salles_bain = :nb_salles_bain, etage = :etage, balcon = :balcon, 
                         parking = :parking, ascenseur = :ascenseur, adresse = :adresse, 
                         ville = :ville, code_postal = :code_postal, pays = :pays, 
-                        statut = :statut, type_propriete = :type_propriete 
+                        statut = :statut, type_propriete = :type_propriete, id_agent = :id_agent 
                         WHERE id_propriete = :id_propriete');
         
         $this->db->bind(':id_propriete', $data['id_propriete']);
@@ -182,6 +182,7 @@ class Property {
         $this->db->bind(':pays', $data['pays']);
         $this->db->bind(':statut', $data['statut']);
         $this->db->bind(':type_propriete', $data['type_propriete']);
+        $this->db->bind(':id_agent', $data['id_agent']);
         
         return $this->db->execute();
     }
