@@ -2,26 +2,26 @@
 define('BASE_PATH', $_SERVER['DOCUMENT_ROOT'] . '/omnes-immobilier/');
 require_once BASE_PATH . 'config/init.php';
 
-// Vérifier si l'utilisateur est connecté
+// Permet de vérifier si l'utilisateur est connecté
 if (!is_logged_in()) {
     set_alert('warning', 'Veuillez vous connecter pour accéder à l\'administration.');
     redirect('/omnes-immobilier/login.php');
 }
 
-// Vérifier si l'utilisateur est un administrateur
+// Permet de si l'utilisateur est un administrateur
 if (!is_user_type('admin')) {
     set_alert('danger', 'Vous n\'êtes pas autorisé à accéder à cette page.');
     redirect('/omnes-immobilier/index.php');
 }
 
-// Créer une fonction temporaire pour récupérer tous les événements
+// Créer une fonction  pour récupérer tous les événements
 function getAllEvents() {
     $db = new Database();
     $db->query('SELECT * FROM Evenement ORDER BY date_debut DESC');
     return $db->resultSet();
 }
 
-// Créer une fonction temporaire pour récupérer un événement par son ID
+// Créer une fonction  pour récupérer un événement par son ID
 function getEventById($id) {
     $db = new Database();
     $db->query('SELECT * FROM Evenement WHERE id_evenement = :id');
@@ -29,7 +29,7 @@ function getEventById($id) {
     return $db->single();
 }
 
-// Créer une fonction temporaire pour ajouter un événement
+// Créer une fonction  pour ajouter un événement
 function addEvent($data) {
     $db = new Database();
     $db->query('INSERT INTO Evenement (titre, description, date_debut, date_fin, image_path, actif) 
@@ -49,7 +49,7 @@ function addEvent($data) {
     }
 }
 
-// Créer une fonction temporaire pour mettre à jour un événement
+// Créer une fonction  pour mettre à jour un événement
 function updateEvent($data) {
     $db = new Database();
     $db->query('UPDATE Evenement 

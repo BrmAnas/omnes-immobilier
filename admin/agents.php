@@ -133,8 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } else {
         // Ajout d'un nouvel agent
-        // Générer un mot de passe aléatoire
-        $password = substr(str_shuffle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'), 0, 10);
+        $password = "agentmdp";
         $user_data['mot_de_passe'] = $password;
         
         // Vérifier si l'email existe déjà

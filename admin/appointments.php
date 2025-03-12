@@ -2,24 +2,22 @@
 define('BASE_PATH', $_SERVER['DOCUMENT_ROOT'] . '/omnes-immobilier/');
 require_once BASE_PATH . 'config/init.php';
 
-// Vérifier si l'utilisateur est connecté
+// Permet de verifier si l'utilisateur est connecté
 if (!is_logged_in()) {
     set_alert('warning', 'Veuillez vous connecter pour accéder à l\'administration.');
     redirect('/omnes-immobilier/login.php');
 }
 
-// Vérifier si l'utilisateur est un administrateur
+// Permet de verifier si l'utilisateur est un administrateur
 if (!is_user_type('admin')) {
     set_alert('danger', 'Vous n\'êtes pas autorisé à accéder à cette page.');
     redirect('/omnes-immobilier/index.php');
 }
 
-// Inclure les classes nécessaires
 require_once BASE_PATH . 'classes/Appointment.php';
 require_once BASE_PATH . 'classes/Agent.php';
 require_once BASE_PATH . 'classes/Client.php';
 
-// Initialiser les classes
 $appointment = new Appointment();
 $agent = new Agent();
 $client = new Client();

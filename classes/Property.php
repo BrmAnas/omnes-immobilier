@@ -56,7 +56,7 @@ class Property {
 
     // Récupération de toutes les propriétés
     public function getAllProperties() {
-        $this->db->query('SELECT * FROM Propriete WHERE statut = "disponible" ORDER BY date_ajout DESC');
+        $this->db->query('SELECT * FROM Propriete ORDER BY date_ajout DESC');
         
         return $this->db->resultSet();
     }
@@ -185,6 +185,42 @@ class Property {
         $this->db->bind(':id_agent', $data['id_agent']);
         
         return $this->db->execute();
+    }
+
+    // Suppression d'une propriété
+    public function delete($id_propriete) {
+        try {
+            $this->db->beginTransaction();
+            
+            // Vérifier s'il existe des rendez-vous associés à cette propriété
+            $this->db->query('SELECT COUNT(*) as count FROM Rendez_Vous WHERE id_propriete = :id_propriete');
+            $this->db->bind(':id_propriete', $id_propriete);
+            $result = $this->db->single();
+            
+            if ($result->count > 0) {
+                // Supprimer les rendez-vous associés
+                $this->db->query('DELETE FROM Rendez_Vous WHERE id_propriete = :id_propriete');
+                $this->db->bind(':id_propriete', $id_propriete);
+                $this->db->execute();
+            }
+            
+            // Supprimer les medias associés
+            $this->db->query('DELETE FROM Media WHERE id_propriete = :id_propriete');
+            $this->db->bind(':id_propriete', $id_propriete);
+            $this->db->execute();
+            
+            // Supprimer la propriété
+            $this->db->query('DELETE FROM Propriete WHERE id_propriete = :id_propriete');
+            $this->db->bind(':id_propriete', $id_propriete);
+            $result = $this->db->execute();
+            
+            $this->db->commit();
+            return $result;
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            error_log("Exception lors de la suppression d'une propriété: " . $e->getMessage());
+            return false;
+        }
     }
 
     // Récupération des médias d'une propriété

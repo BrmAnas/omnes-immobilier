@@ -31,9 +31,11 @@ $agents = $agent->getAllAgents();
 
 // Traitement de l'action
 if ($action === 'delete' && $id > 0) {
-    // TODO: Implémenter la suppression
-    // Pour l'instant, rediriger simplement avec un message
-    set_alert('success', 'La propriété a été supprimée avec succès.');
+    if ($property->delete($id)) {
+        set_alert('success', 'La propriété a été supprimée avec succès.');
+    } else {
+        set_alert('danger', 'Une erreur est survenue lors de la suppression de la propriété.');
+    }
     redirect('/omnes-immobilier/admin/properties.php');
 }
 

@@ -82,7 +82,7 @@ a:hover {
 }
 
 .text-white {
-  color: var(--white) !important;
+  color: white;
 }
 
 .text-muted {
@@ -704,3 +704,4 @@ footer .copyright {
   font-weight: bold;
   color: #0d6efd;
 }
+
