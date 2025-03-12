@@ -122,7 +122,6 @@ include BASE_PATH . 'admin/includes/header.php';
                     </div>
                 </div>
             </div>
-            <!-- Ajouter dans la section de statistiques -->
 <div class="col-md-4">
     <div class="card text-white bg-info mb-3">
         <div class="card-body">

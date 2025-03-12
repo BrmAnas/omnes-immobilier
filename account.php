@@ -89,6 +89,7 @@ include BASE_PATH . 'includes/header.php';
                         <a href="/omnes-immobilier/my-appointments.php" class="list-group-item list-group-item-action">
                             <i class="fas fa-calendar-alt"></i> Mes Rendez-vous
                         </a>
+                    
                     <?php elseif ($user_info->type_utilisateur == 'agent') : ?>
                         <a href="/omnes-immobilier/agent-appointments.php" class="list-group-item list-group-item-action">
                             <i class="fas fa-calendar-alt"></i> Mes Rendez-vous

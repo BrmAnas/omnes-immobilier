@@ -63,10 +63,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 ];
                 
                 $client_id = $client->create($client_data);
-                
+                // Modifier dans la partie traitement du formulaire (après création réussie du compte)
                 if ($client_id) {
                     set_alert('success', 'Votre compte a été créé avec succès. Vous pouvez maintenant vous connecter.');
+                    // Ajouter une notification pour les services premium
+                    $_SESSION['show_premium_services'] = true;
                     redirect('/omnes-immobilier/login.php');
+                }
                 } else {
                     $error = "Une erreur est survenue lors de la création de votre compte client.";
                 }
