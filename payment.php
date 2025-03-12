@@ -39,6 +39,9 @@ if (!$service_type || !$amount) {
     }
 }
 
+// Récupérer l'ID de propriété associé si disponible dans la session
+$property_id = isset($_SESSION['payment_property_id']) ? $_SESSION['payment_property_id'] : null;
+
 // Vérifier si un code de réduction a été appliqué
 $discount_code = isset($_POST['discount_code']) ? trim($_POST['discount_code']) : null;
 $original_amount = $amount;
@@ -59,26 +62,24 @@ if (isset($_POST['submit_payment'])) {
     $payment_method = $_POST['payment_method'];
     
     // Préparation des données client
-// Préparation des données client
-// Préparation des données client
-$client_data = [
-    'id_client' => $client_info->id_client ?? null,
-    'email' => $_POST['email'] ?? $client_info->email ?? '',
-    'nom' => $_POST['nom'] ?? $client_info->nom ?? '',
-    'prenom' => $_POST['prenom'] ?? $client_info->prenom ?? '',
-    'adresse' => $_POST['adresse'] ?? $client_info->adresse ?? '',
-    'ville' => $_POST['ville'] ?? $client_info->ville ?? '',
-    'code_postal' => $_POST['code_postal'] ?? $client_info->code_postal ?? '',
-    'pays' => $_POST['pays'] ?? $client_info->pays ?? 'France',
-    'telephone' => $_POST['telephone'] ?? $client_info->telephone ?? ''
-];
+    $client_data = [
+        'id_client' => $client_info->id_client ?? null,
+        'email' => $_POST['email'] ?? $client_info->email ?? '',
+        'nom' => $_POST['nom'] ?? $client_info->nom ?? '',
+        'prenom' => $_POST['prenom'] ?? $client_info->prenom ?? '',
+        'adresse' => $_POST['adresse'] ?? $client_info->adresse ?? '',
+        'ville' => $_POST['ville'] ?? $client_info->ville ?? '',
+        'code_postal' => $_POST['code_postal'] ?? $client_info->code_postal ?? '',
+        'pays' => $_POST['pays'] ?? $client_info->pays ?? 'France',
+        'telephone' => $_POST['telephone'] ?? $client_info->telephone ?? ''
+    ];
     
-    // Mettre à jour les informations du client si elles ont changé
-    if (
-        $client_data['adresse'] !== ($client_info->adresse ?? '') || 
+    // Mettre à jour les informations du client si elles ont changé et si l'ID client existe
+    if ($client_data['id_client'] && 
+        ($client_data['adresse'] !== ($client_info->adresse ?? '') || 
         $client_data['ville'] !== ($client_info->ville ?? '') || 
         $client_data['code_postal'] !== ($client_info->code_postal ?? '') || 
-        $client_data['pays'] !== ($client_info->pays ?? 'France')
+        $client_data['pays'] !== ($client_info->pays ?? 'France'))
     ) {
         $client->update([
             'id_client' => $client_info->id_client,
@@ -101,7 +102,7 @@ $client_data = [
             'cvv' => $_POST['cvv']
         ];
         
-        $transaction_id = $payment->processCardPayment($payment_data, $client_data, $amount, $service_type);
+        $transaction_id = $payment->processCardPayment($payment_data, $client_data, $amount, $service_type, $property_id);
         
         if ($transaction_id) {
             $payment_success = true;
@@ -114,7 +115,7 @@ $client_data = [
         // Paiement par chèque-cadeau
         $voucher_code = $_POST['voucher_code'];
         
-        $transaction_id = $payment->processVoucherPayment($voucher_code, $client_data, $amount, $service_type);
+        $transaction_id = $payment->processVoucherPayment($voucher_code, $client_data, $amount, $service_type, $property_id);
         
         if ($transaction_id) {
             $payment_success = true;
@@ -129,8 +130,11 @@ $client_data = [
         // Nettoyer les variables de session liées au paiement
         unset($_SESSION['payment_service']);
         unset($_SESSION['payment_amount']);
+        if (isset($_SESSION['payment_property_id'])) {
+            unset($_SESSION['payment_property_id']);
+        }
         
-        redirect('/omnes-immobilier/payment-confirmation.php');
+        redirect('/omnes-immobilier/payment_confirmation.php');
     }
 }
 

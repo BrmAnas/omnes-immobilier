@@ -4,405 +4,386 @@ require_once BASE_PATH . 'config/init.php';
 
 // Vérifier si l'utilisateur est connecté
 if (!is_logged_in()) {
-    $_SESSION['redirect_url'] = $_SERVER['REQUEST_URI'];
-    set_alert('warning', 'Veuillez vous connecter pour prendre un rendez-vous.');
+    set_alert('warning', 'Veuillez vous connecter pour accéder à l\'administration.');
     redirect('/omnes-immobilier/login.php');
 }
 
-// Inclure les classes nécessaires
-require_once BASE_PATH . 'classes/Agent.php';
-require_once BASE_PATH . 'classes/Property.php';
-require_once BASE_PATH . 'classes/Client.php';
-require_once BASE_PATH . 'classes/Appointment.php';
-
-// Initialiser les classes
-$agent = new Agent();
-$property = new Property();
-$client = new Client();
-$appointment = new Appointment();
-
-// Vérifier si l'utilisateur est un client
-$user_client = $client->getClientByUserId($_SESSION['user_id']);
-if (!$user_client) {
-    set_alert('danger', 'Vous devez être un client pour prendre rendez-vous.');
+// Vérifier si l'utilisateur est un administrateur
+if (!is_user_type('admin')) {
+    set_alert('danger', 'Vous n\'êtes pas autorisé à accéder à cette page.');
     redirect('/omnes-immobilier/index.php');
 }
 
-// Si on a un agent et une propriété spécifiés dans l'URL
-$id_agent = isset($_GET['agent']) ? intval($_GET['agent']) : null;
-$id_propriete = isset($_GET['property']) ? intval($_GET['property']) : null;
+// Inclure les classes nécessaires
+require_once BASE_PATH . 'classes/Appointment.php';
+require_once BASE_PATH . 'classes/Agent.php';
+require_once BASE_PATH . 'classes/Client.php';
 
-// Si les données du formulaire ont été soumises
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    // Validation des données
-    $errors = [];
+// Initialiser les classes
+$appointment = new Appointment();
+$agent = new Agent();
+$client = new Client();
 
-    if (empty($_POST['id_agent'])) {
-        $errors[] = "Veuillez sélectionner un agent.";
-    }
+// Créer une fonction temporaire pour récupérer tous les rendez-vous
+function getAllAppointments() {
+    $db = new Database();
+    $db->query('SELECT r.*, 
+                p.titre as property_title, 
+                c.id_client, ca.nom as client_nom, ca.prenom as client_prenom, 
+                a.id_agent, aa.nom as agent_nom, aa.prenom as agent_prenom 
+                FROM Rendez_Vous r 
+                INNER JOIN Propriete p ON r.id_propriete = p.id_propriete 
+                INNER JOIN Client c ON r.id_client = c.id_client 
+                INNER JOIN Utilisateur ca ON c.id_utilisateur = ca.id_utilisateur 
+                INNER JOIN Agent_Immobilier a ON r.id_agent = a.id_agent 
+                INNER JOIN Utilisateur aa ON a.id_utilisateur = aa.id_utilisateur 
+                ORDER BY r.date DESC, r.heure DESC');
+    return $db->resultSet();
+}
 
-    if (!isset($_POST['id_propriete'])) {
-        $errors[] = "Veuillez sélectionner une propriété ou choisir un rendez-vous général.";
-    }
-
-    if (empty($_POST['date'])) {
-        $errors[] = "Veuillez choisir une date.";
-    } elseif (strtotime($_POST['date']) < strtotime(date('Y-m-d'))) {
-        $errors[] = "La date doit être future.";
-    }
-
-    if (empty($_POST['heure'])) {
-        $errors[] = "Veuillez choisir une heure.";
-    }
-
-    if (empty($_POST['motif'])) {
-        $errors[] = "Veuillez indiquer le motif du rendez-vous.";
-    }
-
-    // Si pas d'erreurs, procéder à la création du rendez-vous
-    if (empty($errors)) {
-        // Récupérer les données du formulaire
-        $appointment_data = [
-            'id_client' => $user_client->id_client,
-            'id_agent' => $_POST['id_agent'],
-            'id_propriete' => $_POST['id_propriete'],
-            'date' => $_POST['date'],
-            'heure' => $_POST['heure'],
-            'motif' => $_POST['motif'],
-            'commentaire' => isset($_POST['commentaire']) ? $_POST['commentaire'] : null
-        ];
-        
-        // Vérifier si le créneau est disponible
-        if ($appointment->isSlotAvailable($appointment_data['id_agent'], $appointment_data['date'], $appointment_data['heure'])) {
-            // Créer le rendez-vous
-            $rdv_id = $appointment->create($appointment_data);
-            
-            if ($rdv_id) {
-                // Envoi d'une notification à l'agent (email ou notification système)
-                // Code pour envoyer une notification ici si nécessaire
-                
-                set_alert('success', 'Votre rendez-vous a été pris avec succès. Vous recevrez une confirmation lorsque l\'agent aura validé le rendez-vous.');
-                redirect('/omnes-immobilier/my-appointments.php');
-            } else {
-                $error = "Une erreur est survenue lors de la prise de rendez-vous.";
-            }
+// Actions à traiter
+if (isset($_GET['action']) && isset($_GET['id'])) {
+    $id_rdv = $_GET['id'];
+    $action = $_GET['action'];
+    
+    if ($action == 'confirm') {
+        if ($appointment->updateStatus($id_rdv, 'confirmé')) {
+            set_alert('success', 'Le rendez-vous a été confirmé avec succès.');
         } else {
-            $error = "Ce créneau n'est plus disponible. Veuillez en choisir un autre.";
+            set_alert('danger', 'Une erreur est survenue lors de la confirmation du rendez-vous.');
         }
+    } elseif ($action == 'cancel') {
+        if ($appointment->updateStatus($id_rdv, 'annulé')) {
+            set_alert('success', 'Le rendez-vous a été annulé avec succès.');
+        } else {
+            set_alert('danger', 'Une erreur est survenue lors de l\'annulation du rendez-vous.');
+        }
+    }
+    
+    redirect('/omnes-immobilier/admin/appointments.php');
+}
+
+// Récupérer tous les rendez-vous
+$all_appointments = getAllAppointments();
+
+// Filtrer les rendez-vous
+$today = [];
+$upcoming = [];
+$past = [];
+
+foreach ($all_appointments as $rdv) {
+    $date = $rdv->date;
+    $today_date = date('Y-m-d');
+    
+    if ($date == $today_date) {
+        $today[] = $rdv;
+    } elseif ($date > $today_date) {
+        $upcoming[] = $rdv;
     } else {
-        $error = implode("<br>", $errors);
+        $past[] = $rdv;
     }
 }
 
-// Si un agent est spécifié, récupérer ses infos
-$agent_info = $id_agent ? $agent->getAgentById($id_agent) : null;
-
-// Si une propriété est spécifiée, récupérer ses infos
-$property_info = $id_propriete ? $property->getPropertyById($id_propriete) : null;
-
-// Si on n'a pas d'agent spécifié, récupérer tous les agents
-$all_agents = $id_agent ? null : $agent->getAllAgents();
-
-// Si on a un agent mais pas de propriété, récupérer les propriétés gérées par cet agent
-$agent_properties = ($id_agent && $id_propriete === null) ? $property->getPropertiesByAgent($id_agent) : null;
-
-// Récupérer les disponibilités de l'agent si un agent est spécifié
-$today = date('Y-m-d');
-$availabilities = $id_agent ? $agent->getWeeklyAvailabilities($id_agent, $today) : null;
-
-$page_title = "Prise de rendez-vous";
-include BASE_PATH . 'includes/header.php';
+$page_title = "Gestion des rendez-vous";
+include BASE_PATH . 'admin/includes/header.php';
 ?>
 
-<div class="container mt-4">
-    <h1 class="section-title mb-4" data-aos="fade-up">Prendre un rendez-vous</h1>
-    
-    <?php if (isset($error)) : ?>
-        <div class="alert alert-danger"><?php echo $error; ?></div>
-    <?php endif; ?>
-    
-    <form method="post" action="/omnes-immobilier/appointment.php">
-        <!-- Étape 1: Sélection de l'agent -->
-        <?php if (!$agent_info) : ?>
-            <div class="card mb-4" data-aos="fade-up">
-                <div class="card-header bg-primary text-white">
-                    Étape 1: Choisissez un agent immobilier
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <?php if (!empty($all_agents)) : ?>
-                            <?php foreach ($all_agents as $index => $a) : ?>
-                                <div class="col-md-4 mb-3" data-aos="fade-up" data-aos-delay="<?php echo $index % 3 * 100; ?>">
-                                    <div class="card h-100 agent-card">
-                                        <div class="card-body text-center">
-                                            <?php if (isset($a->photo_path) && $a->photo_path) : ?>
-                                                <img src="<?php echo $a->photo_path; ?>" class="agent-img" alt="<?php echo $a->prenom . ' ' . $a->nom; ?>" onerror="this.src='/omnes-immobilier/assets/img/agents/default.jpg'">
-                                            <?php else : ?>
-                                                <img src="/omnes-immobilier/assets/img/agents/default.jpg" class="agent-img" alt="<?php echo $a->prenom . ' ' . $a->nom; ?>" onerror="this.src='https://via.placeholder.com/150?text=Agent'">
-                                            <?php endif; ?>
-                                            
-                                            <h5 class="agent-name"><?php echo $a->prenom . ' ' . $a->nom; ?></h5>
-                                            <p class="agent-title"><?php echo $a->specialite; ?></p>
-                                            
-                                            <a href="/omnes-immobilier/appointment.php?agent=<?php echo $a->id_agent; ?><?php echo $id_propriete ? '&property=' . $id_propriete : ''; ?>" class="btn btn-primary w-100">Sélectionner</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        <?php else : ?>
-                            <div class="col-12">
-                                <div class="alert alert-info">
-                                    Aucun agent disponible pour le moment.
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-        <?php else : ?>
-            <input type="hidden" name="id_agent" value="<?php echo $agent_info->id_agent; ?>">
-            
-            <div class="card mb-4" data-aos="fade-up">
-                <div class="card-header bg-primary text-white">
-                    Agent sélectionné
-                </div>
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <?php if (isset($agent_info->photo_path) && $agent_info->photo_path) : ?>
-                            <img src="<?php echo $agent_info->photo_path; ?>" class="rounded-circle me-3" alt="<?php echo $agent_info->prenom . ' ' . $agent_info->nom; ?>" style="width: 80px; height: 80px; object-fit: cover;" onerror="this.src='/omnes-immobilier/assets/img/agents/default.jpg'">
-                        <?php else : ?>
-                            <img src="/omnes-immobilier/assets/img/agents/default.jpg" class="rounded-circle me-3" alt="<?php echo $agent_info->prenom . ' ' . $agent_info->nom; ?>" style="width: 80px; height: 80px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/80?text=Agent'">
-                        <?php endif; ?>
-                        <div>
-                            <h5 class="mb-1"><?php echo $agent_info->prenom . ' ' . $agent_info->nom; ?></h5>
-                            <p class="mb-0"><?php echo $agent_info->specialite; ?></p>
-                        </div>
-                        <a href="/omnes-immobilier/appointment.php<?php echo $id_propriete ? '?property=' . $id_propriete : ''; ?>" class="btn btn-outline-primary ms-auto">Changer</a>
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <?php include BASE_PATH . 'admin/includes/sidebar.php'; ?>
+        
+        <!-- Main content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Gestion des rendez-vous</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="exportTable()">
+                            <i class="fas fa-download"></i> Exporter
+                        </button>
                     </div>
                 </div>
             </div>
             
-            <!-- Étape 2: Sélection de la propriété -->
-            <?php if ($id_propriete === null) : ?>
-                <div class="card mb-4" data-aos="fade-up">
-                    <div class="card-header bg-primary text-white">
-                        Étape 2: Choisissez une propriété
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <?php if (!empty($agent_properties)) : ?>
-                                <?php foreach ($agent_properties as $index => $p) : ?>
-                                    <div class="col-md-4 mb-3" data-aos="fade-up" data-aos-delay="<?php echo $index % 3 * 100; ?>">
-                                        <div class="card h-100 property-card">
-                                            <?php 
-                                            // Récupérer la première image de la propriété
-                                            $medias = $property->getMedia($p->id_propriete);
-                                            $image_path = !empty($medias) && isset($medias[0]->url_path) ? $medias[0]->url_path : '/omnes-immobilier/assets/img/properties/default.jpg';
-                                            ?>
-                                            
-                                            <img src="<?php echo $image_path; ?>" class="card-img-top" alt="<?php echo $p->titre; ?>" style="height: 150px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/300x150?text=Propriété'">
-                                            
-                                            <div class="card-body">
-                                                <h5 class="card-title"><?php echo $p->titre; ?></h5>
-                                                <p class="property-location"><i class="fas fa-map-marker-alt"></i> <?php echo $p->ville; ?></p>
-                                                    <?php if ($p->type_propriete !== 'location') : ?>
-                                                        <p class="property-price"><?php echo format_price($p->prix); ?></p>
-                                                    <?php else : ?>
-                                                        <p class="property-price"><?php echo format_price($p->prix); ?>/mois</p>
-                                                    <?php endif; ?>
-                                                    
-                                                    <a href="/omnes-immobilier/appointment.php?agent=<?php echo $agent_info->id_agent; ?>&property=<?php echo $p->id_propriete; ?>" class="btn btn-primary w-100 mt-2">Sélectionner</a>
-                                                </div>
-                                            </div>
-                                        </div>
+            <!-- Onglets pour les différentes catégories de rendez-vous -->
+            <ul class="nav nav-tabs mb-4" id="appointmentTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="today-tab" data-bs-toggle="tab" data-bs-target="#today" type="button" role="tab" aria-controls="today" aria-selected="true">
+                        Aujourd'hui (<?php echo count($today); ?>)
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="upcoming-tab" data-bs-toggle="tab" data-bs-target="#upcoming" type="button" role="tab" aria-controls="upcoming" aria-selected="false">
+                        À venir (<?php echo count($upcoming); ?>)
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="past-tab" data-bs-toggle="tab" data-bs-target="#past" type="button" role="tab" aria-controls="past" aria-selected="false">
+                        Passés (<?php echo count($past); ?>)
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab" aria-controls="all" aria-selected="false">
+                        Tous (<?php echo count($all_appointments); ?>)
+                    </button>
+                </li>
+            </ul>
+            
+            <!-- Contenu des onglets -->
+            <div class="tab-content" id="appointmentTabsContent">
+                <!-- Rendez-vous d'aujourd'hui -->
+                <div class="tab-pane fade show active" id="today" role="tabpanel" aria-labelledby="today-tab">
+                    <?php if (!empty($today)) : ?>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Heure</th>
+                                        <th>Client</th>
+                                        <th>Agent</th>
+                                        <th>Propriété</th>
+                                        <th>Motif</th>
+                                        <th>Statut</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($today as $rdv) : ?>
+                                        <tr>
+                                            <td><?php echo format_time($rdv->heure); ?></td>
+                                            <td><?php echo htmlspecialchars($rdv->client_prenom . ' ' . $rdv->client_nom); ?></td>
+                                            <td><?php echo htmlspecialchars($rdv->agent_prenom . ' ' . $rdv->agent_nom); ?></td>
+                                            <td><?php echo htmlspecialchars($rdv->property_title); ?></td>
+                                            <td><?php echo htmlspecialchars($rdv->motif); ?></td>
+                                            <td>
+                                                <span class="badge bg-<?php echo $rdv->statut == 'confirmé' ? 'success' : ($rdv->statut == 'annulé' ? 'danger' : 'warning'); ?>">
+                                                    <?php echo ucfirst($rdv->statut); ?>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <?php if ($rdv->statut == 'en attente') : ?>
+                                                    <div class="btn-group">
+                                                        <a href="/omnes-immobilier/admin/appointments.php?action=confirm&id=<?php echo $rdv->id_rdv; ?>" class="btn btn-sm btn-success" title="Confirmer">
+                                                            <i class="fas fa-check"></i>
+                                                        </a>
+                                                        <a href="/omnes-immobilier/admin/appointments.php?action=cancel&id=<?php echo $rdv->id_rdv; ?>" class="btn btn-sm btn-danger" title="Annuler" onclick="return confirm('Êtes-vous sûr de vouloir annuler ce rendez-vous ?')">
+                                                            <i class="fas fa-times"></i>
+                                                        </a>
+                                                    </div>
+                                                <?php elseif ($rdv->statut == 'confirmé') : ?>
+                                                    <a href="/omnes-immobilier/admin/appointments.php?action=cancel&id=<?php echo $rdv->id_rdv; ?>" class="btn btn-sm btn-danger" title="Annuler" onclick="return confirm('Êtes-vous sûr de vouloir annuler ce rendez-vous ?')">
+                                                        <i class="fas fa-times"></i>
+                                                    </a>
+                                                <?php else : ?>
+                                                    -
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
                                     <?php endforeach; ?>
-                                <?php endif; ?>
-                                
-                                <!-- Option pour rendez-vous général -->
-                                <div class="col-md-4 mb-3" data-aos="fade-up">
-                                    <div class="card h-100">
-                                        <div class="card-body d-flex flex-column justify-content-center align-items-center text-center">
-                                            <i class="fas fa-calendar-alt fa-5x mb-3 text-muted"></i>
-                                            <h5 class="card-title">Rendez-vous général</h5>
-                                            <p class="card-text">Prendre un rendez-vous sans propriété spécifique</p>
-                                            <a href="/omnes-immobilier/appointment.php?agent=<?php echo $agent_info->id_agent; ?>&property=0" class="btn btn-outline-primary w-100 mt-2">Sélectionner</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                <?php else : ?>
-                    <?php if ($id_propriete > 0 && $property_info) : ?>
-                        <input type="hidden" name="id_propriete" value="<?php echo $property_info->id_propriete; ?>">
-                        
-                        <div class="card mb-4" data-aos="fade-up">
-                            <div class="card-header bg-primary text-white">
-                                Propriété sélectionnée
-                            </div>
-                            <div class="card-body">
-                                <div class="d-flex align-items-center">
-                                    <?php 
-                                    // Récupérer la première image de la propriété
-                                    $medias = $property->getMedia($property_info->id_propriete);
-                                    $image_path = !empty($medias) && isset($medias[0]->url_path) ? $medias[0]->url_path : '/omnes-immobilier/assets/img/properties/default.jpg';
-                                    ?>
-                                    
-                                    <img src="<?php echo $image_path; ?>" class="me-3" alt="<?php echo $property_info->titre; ?>" style="width: 80px; height: 80px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/80?text=Propriété'">
-                                    <div>
-                                        <h5 class="mb-1"><?php echo $property_info->titre; ?></h5>
-                                        <p class="mb-0"><?php echo $property_info->ville; ?></p>
-                                    </div>
-                                    <a href="/omnes-immobilier/appointment.php?agent=<?php echo $agent_info->id_agent; ?>" class="btn btn-outline-primary ms-auto">Changer</a>
-                                </div>
-                            </div>
+                                </tbody>
+                            </table>
                         </div>
                     <?php else : ?>
-                        <input type="hidden" name="id_propriete" value="0">
-                        
-                        <div class="card mb-4" data-aos="fade-up">
-                            <div class="card-header bg-primary text-white">
-                                Rendez-vous général
-                            </div>
-                            <div class="card-body">
-                                <p>Vous avez choisi de prendre un rendez-vous général avec l'agent, sans propriété spécifique.</p>
-                                <a href="/omnes-immobilier/appointment.php?agent=<?php echo $agent_info->id_agent; ?>" class="btn btn-outline-primary">Choisir une propriété</a>
-                            </div>
+                        <div class="alert alert-info">
+                            Aucun rendez-vous prévu aujourd'hui.
                         </div>
                     <?php endif; ?>
-                    
-                    <!-- Étape 3: Sélection date et heure -->
-                    <div class="card mb-4" data-aos="fade-up">
-                        <div class="card-header bg-primary text-white">
-                            Étape 3: Choisissez une date et une heure
-                        </div>
-                        <div class="card-body">
-                            <div class="row mb-4">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="date" class="form-label">Date du rendez-vous</label>
-                                        <input type="date" class="form-control" id="date" name="date" required min="<?php echo date('Y-m-d'); ?>">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="heure" class="form-label">Heure du rendez-vous</label>
-                                        <select class="form-select" id="heure" name="heure" required>
-                                            <option value="">Sélectionnez une heure</option>
-                                            <?php for ($h = 9; $h < 18; $h++) : ?>
-                                                <?php if ($h != 12) : // Pas de rendez-vous à midi ?>
-                                                    <option value="<?php echo sprintf('%02d', $h); ?>:00:00"><?php echo sprintf('%02d', $h); ?>:00</option>
-                                                    <option value="<?php echo sprintf('%02d', $h); ?>:30:00"><?php echo sprintf('%02d', $h); ?>:30</option>
+                </div>
+                
+                <!-- Rendez-vous à venir -->
+                <div class="tab-pane fade" id="upcoming" role="tabpanel" aria-labelledby="upcoming-tab">
+                    <?php if (!empty($upcoming)) : ?>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Heure</th>
+                                        <th>Client</th>
+                                        <th>Agent</th>
+                                        <th>Propriété</th>
+                                        <th>Motif</th>
+                                        <th>Statut</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($upcoming as $rdv) : ?>
+                                        <tr>
+                                            <td><?php echo format_date($rdv->date); ?></td>
+                                            <td><?php echo format_time($rdv->heure); ?></td>
+                                            <td><?php echo htmlspecialchars($rdv->client_prenom . ' ' . $rdv->client_nom); ?></td>
+                                            <td><?php echo htmlspecialchars($rdv->agent_prenom . ' ' . $rdv->agent_nom); ?></td>
+                                            <td><?php echo htmlspecialchars($rdv->property_title); ?></td>
+                                            <td><?php echo htmlspecialchars($rdv->motif); ?></td>
+                                            <td>
+                                                <span class="badge bg-<?php echo $rdv->statut == 'confirmé' ? 'success' : ($rdv->statut == 'annulé' ? 'danger' : 'warning'); ?>">
+                                                    <?php echo ucfirst($rdv->statut); ?>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <?php if ($rdv->statut == 'en attente') : ?>
+                                                    <div class="btn-group">
+                                                        <a href="/omnes-immobilier/admin/appointments.php?action=confirm&id=<?php echo $rdv->id_rdv; ?>" class="btn btn-sm btn-success" title="Confirmer">
+                                                            <i class="fas fa-check"></i>
+                                                        </a>
+                                                        <a href="/omnes-immobilier/admin/appointments.php?action=cancel&id=<?php echo $rdv->id_rdv; ?>" class="btn btn-sm btn-danger" title="Annuler" onclick="return confirm('Êtes-vous sûr de vouloir annuler ce rendez-vous ?')">
+                                                            <i class="fas fa-times"></i>
+                                                        </a>
+                                                    </div>
+                                                <?php elseif ($rdv->statut == 'confirmé') : ?>
+                                                    <a href="/omnes-immobilier/admin/appointments.php?action=cancel&id=<?php echo $rdv->id_rdv; ?>" class="btn btn-sm btn-danger" title="Annuler" onclick="return confirm('Êtes-vous sûr de vouloir annuler ce rendez-vous ?')">
+                                                        <i class="fas fa-times"></i>
+                                                    </a>
+                                                <?php else : ?>
+                                                    -
                                                 <?php endif; ?>
-                                            <?php endfor; ?>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="alert alert-info">
-                                <h5 class="alert-heading">Disponibilités de l'agent:</h5>
-                                <p>Consultez le calendrier ci-dessous pour connaître les disponibilités de l'agent. Les créneaux marqués en vert sont disponibles.</p>
-                                
-                                <div class="table-responsive">
-                                    <table class="table table-bordered text-center">
-                                        <thead>
-                                            <tr>
-                                                <th></th>
-                                                <th>Lundi</th>
-                                                <th>Mardi</th>
-                                                <th>Mercredi</th>
-                                                <th>Jeudi</th>
-                                                <th>Vendredi</th>
-                                                <th>Samedi</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <th>Matin</th>
-                                                <?php for ($i = 1; $i <= 6; $i++) : ?>
-                                                    <td class="<?php echo isset($availabilities[$i]) && !empty(array_filter($availabilities[$i], function($avail) { return strtotime($avail->heure_debut) < strtotime('12:00:00'); })) ? 'bg-success text-white' : 'bg-danger text-white'; ?>">
-                                                        <?php echo isset($availabilities[$i]) && !empty(array_filter($availabilities[$i], function($avail) { return strtotime($avail->heure_debut) < strtotime('12:00:00'); })) ? '✓' : '×'; ?>
-                                                    </td>
-                                                <?php endfor; ?>
-                                            </tr>
-                                            <tr>
-                                                <th>Après-midi</th>
-                                                <?php for ($i = 1; $i <= 6; $i++) : ?>
-                                                    <td class="<?php echo isset($availabilities[$i]) && !empty(array_filter($availabilities[$i], function($avail) { return strtotime($avail->heure_debut) >= strtotime('12:00:00'); })) ? 'bg-success text-white' : 'bg-danger text-white'; ?>">
-                                                        <?php echo isset($availabilities[$i]) && !empty(array_filter($availabilities[$i], function($avail) { return strtotime($avail->heure_debut) >= strtotime('12:00:00'); })) ? '✓' : '×'; ?>
-                                                    </td>
-                                                <?php endfor; ?>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                                
-                                <div class="mt-2">
-                                    <p class="mb-0"><small>Légende: ✓ = Disponible, × = Indisponible</small></p>
-                                    <p class="mb-0"><small>Note: La disponibilité de l'agent est sujette à changement. Veuillez vérifier avec l'agent si vous avez des questions.</small></p>
-                                </div>
-                            </div>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
                         </div>
-                    </div>
-                    
-                    <!-- Étape 4: Détails du rendez-vous -->
-                    <div class="card mb-4" data-aos="fade-up">
-                        <div class="card-header bg-primary text-white">
-                            Étape 4: Détails du rendez-vous
+                    <?php else : ?>
+                        <div class="alert alert-info">
+                            Aucun rendez-vous à venir.
                         </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label for="motif" class="form-label">Motif du rendez-vous</label>
-                                <select class="form-select" id="motif" name="motif" required>
-                                    <option value="">Sélectionnez un motif</option>
-                                    <option value="Visite du bien">Visite du bien</option>
-                                    <option value="Information sur le bien">Information sur le bien</option>
-                                    <option value="Négociation">Négociation</option>
-                                    <option value="Signature de documents">Signature de documents</option>
-                                    <option value="Conseil immobilier">Conseil immobilier</option>
-                                    <option value="Autre">Autre</option>
-                                </select>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="commentaire" class="form-label">Commentaire (optionnel)</label>
-                                <textarea class="form-control" id="commentaire" name="commentaire" rows="3" placeholder="Précisez votre demande, vos questions, ou toute information utile pour l'agent..."></textarea>
-                            </div>
+                    <?php endif; ?>
+                </div>
+                
+                <!-- Rendez-vous passés -->
+                <div class="tab-pane fade" id="past" role="tabpanel" aria-labelledby="past-tab">
+                    <?php if (!empty($past)) : ?>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Heure</th>
+                                        <th>Client</th>
+                                        <th>Agent</th>
+                                        <th>Propriété</th>
+                                        <th>Motif</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($past as $rdv) : ?>
+                                        <tr>
+                                            <td><?php echo format_date($rdv->date); ?></td>
+                                            <td><?php echo format_time($rdv->heure); ?></td>
+                                            <td><?php echo htmlspecialchars($rdv->client_prenom . ' ' . $rdv->client_nom); ?></td>
+                                            <td><?php echo htmlspecialchars($rdv->agent_prenom . ' ' . $rdv->agent_nom); ?></td>
+                                            <td><?php echo htmlspecialchars($rdv->property_title); ?></td>
+                                            <td><?php echo htmlspecialchars($rdv->motif); ?></td>
+                                            <td>
+                                                <span class="badge bg-<?php echo $rdv->statut == 'confirmé' ? 'success' : ($rdv->statut == 'annulé' ? 'danger' : 'warning'); ?>">
+                                                    <?php echo ucfirst($rdv->statut); ?>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
                         </div>
-                    </div>
-                    
-                    <div class="d-grid gap-2 mb-5">
-                        <button type="submit" class="btn btn-primary btn-lg">Confirmer le rendez-vous</button>
-                    </div>
-                <?php endif; ?>
-            <?php endif; ?>
-        </form>
+                    <?php else : ?>
+                        <div class="alert alert-info">
+                            Aucun rendez-vous passé.
+                        </div>
+                    <?php endif; ?>
+                </div>
+                
+                <!-- Tous les rendez-vous -->
+                <div class="tab-pane fade" id="all" role="tabpanel" aria-labelledby="all-tab">
+                    <?php if (!empty($all_appointments)) : ?>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover" id="appointmentsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Heure</th>
+                                        <th>Client</th>
+                                        <th>Agent</th>
+                                        <th>Propriété</th>
+                                        <th>Motif</th>
+                                        <th>Statut</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($all_appointments as $rdv) : ?>
+                                        <tr>
+                                            <td><?php echo format_date($rdv->date); ?></td>
+                                            <td><?php echo format_time($rdv->heure); ?></td>
+                                            <td><?php echo htmlspecialchars($rdv->client_prenom . ' ' . $rdv->client_nom); ?></td>
+                                            <td><?php echo htmlspecialchars($rdv->agent_prenom . ' ' . $rdv->agent_nom); ?></td>
+                                            <td><?php echo htmlspecialchars($rdv->property_title); ?></td>
+                                            <td><?php echo htmlspecialchars($rdv->motif); ?></td>
+                                            <td>
+                                                <span class="badge bg-<?php echo $rdv->statut == 'confirmé' ? 'success' : ($rdv->statut == 'annulé' ? 'danger' : 'warning'); ?>">
+                                                    <?php echo ucfirst($rdv->statut); ?>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <?php if ($rdv->statut == 'en attente') : ?>
+                                                    <div class="btn-group">
+                                                        <a href="/omnes-immobilier/admin/appointments.php?action=confirm&id=<?php echo $rdv->id_rdv; ?>" class="btn btn-sm btn-success" title="Confirmer">
+                                                            <i class="fas fa-check"></i>
+                                                        </a>
+                                                        <a href="/omnes-immobilier/admin/appointments.php?action=cancel&id=<?php echo $rdv->id_rdv; ?>" class="btn btn-sm btn-danger" title="Annuler" onclick="return confirm('Êtes-vous sûr de vouloir annuler ce rendez-vous ?')">
+                                                            <i class="fas fa-times"></i>
+                                                        </a>
+                                                    </div>
+                                                <?php elseif ($rdv->statut == 'confirmé' && $rdv->date >= date('Y-m-d')) : ?>
+                                                    <a href="/omnes-immobilier/admin/appointments.php?action=cancel&id=<?php echo $rdv->id_rdv; ?>" class="btn btn-sm btn-danger" title="Annuler" onclick="return confirm('Êtes-vous sûr de vouloir annuler ce rendez-vous ?')">
+                                                        <i class="fas fa-times"></i>
+                                                    </a>
+                                                <?php else : ?>
+                                                    -
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else : ?>
+                        <div class="alert alert-info">
+                            Aucun rendez-vous disponible.
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </main>
     </div>
+</div>
+
+<script>
+function exportTable() {
+    // Fonction simple pour exporter le tableau en CSV
+    let csv = [];
+    const rows = document.querySelectorAll('#appointmentsTable tr');
     
-    <script>
-    // Script pour gérer l'interdépendance entre la date et l'heure
-    document.addEventListener('DOMContentLoaded', function() {
-        const dateInput = document.getElementById('date');
-        const heureSelect = document.getElementById('heure');
+    for (let i = 0; i < rows.length; i++) {
+        let row = [], cols = rows[i].querySelectorAll('td, th');
         
-        if (dateInput && heureSelect) {
-            dateInput.addEventListener('change', function() {
-                updateAvailableHours();
-            });
-            
-            function updateAvailableHours() {
-                const selectedDate = dateInput.value;
-                if (!selectedDate) return;
-                
-                // Ici, vous pourriez faire une requête AJAX pour obtenir les heures disponibles
-                // pour la date sélectionnée, puis mettre à jour les options de heureSelect
-                
-                // Pour l'instant, on simule juste une mise à jour
-                console.log('Date sélectionnée:', selectedDate);
-            }
+        for (let j = 0; j < cols.length - 1; j++) { // -1 pour exclure la colonne Actions
+            let text = cols[j].innerText.replace(/"/g, '""'); // Échapper les guillemets
+            row.push('"' + text + '"');
         }
-    });
-    </script>
+        csv.push(row.join(','));
+    }
     
-    <?php include BASE_PATH . 'includes/footer.php'; ?>
+    // Télécharger le CSV
+    const csvFile = new Blob([csv.join('\n')], { type: 'text/csv' });
+    const downloadLink = document.createElement('a');
+    downloadLink.href = URL.createObjectURL(csvFile);
+    downloadLink.download = 'rendez-vous.csv';
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+}
+</script>
+
+<?php include BASE_PATH . 'admin/includes/footer.php'; ?>

@@ -44,7 +44,14 @@ $purchased_services = $db->resultSet();
 
 // Traitement des demandes d'achat de service
 if (isset($_GET['purchase']) && !empty($_GET['service'])) {
-    $service_type = $_GET['service'];
+    // Valider le type de service
+    $service_type = filter_input(INPUT_GET, 'service', FILTER_SANITIZE_STRING);
+    $valid_services = ['dossier_acheteur_premium', 'photos_professionnelles', 'visite_virtuelle', 'plan_2d', 'rapport_expertise'];
+    
+    if (!in_array($service_type, $valid_services)) {
+        set_alert('danger', 'Type de service invalide.');
+        redirect('/omnes-immobilier/account-services.php');
+    }
     
     // Vérifier si le service existe et récupérer son prix
     $service_price = $payment->getServicePrice($service_type);

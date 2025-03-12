@@ -44,7 +44,11 @@ if (!$property_info) {
 
 // Vérifier si la visite virtuelle est déjà achetée
 $db = new Database();
-$db->query('SELECT * FROM Transaction WHERE id_client = :id_client AND type_service = "visite_virtuelle" AND id_propriete = :id_propriete AND statut = "confirmé"');
+$db->query('SELECT * FROM Transaction 
+           WHERE id_client = :id_client 
+           AND type_service = "visite_virtuelle" 
+           AND (id_propriete = :id_propriete OR (id_propriete IS NULL AND :id_propriete IS NOT NULL))
+           AND statut = "confirmé"');
 $db->bind(':id_client', $client_info->id_client);
 $db->bind(':id_propriete', $property_id);
 $existing_purchase = $db->single();

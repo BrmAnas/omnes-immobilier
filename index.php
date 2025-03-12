@@ -41,7 +41,7 @@ if (count($agents) > 3) {
             </div>
         </div>
         <div class="col-md-4" data-aos="fade-left">
-            <img src="/omnes-immobilier/assets/img/banners/hero-banner.jpg" alt="Omnes Immobilier" class="img-fluid" onerror="this.src='https://via.placeholder.com/400x300?text=Omnes+Immobilier'">
+            <img src="assets/img/banners/hero-banner.jpg" style="height=300" alt="Omnes Immobilier" class="img-fluid" onerror="this.src='https://via.placeholder.com/400x300?text=Omnes+Immobilier'">
         </div>
     </div>
 </section>

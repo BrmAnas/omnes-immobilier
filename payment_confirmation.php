@@ -9,6 +9,7 @@ if (!is_logged_in()) {
 
 // Vérifier si un ID de transaction est présent
 if (!isset($_SESSION['transaction_id'])) {
+    set_alert('warning', 'Aucune information de transaction trouvée. Veuillez effectuer un paiement.');
     redirect('/omnes-immobilier/account.php');
 }
 
