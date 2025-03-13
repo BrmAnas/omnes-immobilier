@@ -103,7 +103,7 @@ include BASE_PATH . 'includes/header.php';
                             <!-- Ici, on intégrerait normalement une vraie visite virtuelle 3D via un service comme Matterport -->
                             <!-- Pour ce prototype, nous utilisons une simulation simple -->
                             <div class="ratio ratio-16x9">
-                                <iframe src="https://www.youtube.com/embed/WfJXAyEnIXw" title="Visite virtuelle" allowfullscreen></iframe>
+                                <iframe src="https://www.youtube.com/embed/nqn7RQX-gW8" title="Visite virtuelle" allowfullscreen></iframe>
                             </div>
                             
                             <div class="mt-4">
